@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>趋势先知 | Trend Prophet</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+:root {
+  --bg:#06060a;--bg2:#0d0d14;--bg3:#13131e;
+  --border:#1a1a2e;--border-l:#252540;
+  --text:#e8e6e1;--text2:#a09b92;--text3:#6b6660;
+  --accent:#c9a96e;--accent2:#8b6914;--accent-g:rgba(201,169,110,0.15);
+  --green:#4ade80;--red:#f87171;--blue:#60a5fa;--purple:#a78bfa;
+  --orange:#fb923c;--cyan:#22d3ee;
+  --r:12px;--rs:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'SF Pro Display','PingFang SC',sans-serif;background:var(--bg);background-image:url('/assets/bg-trend-soft.png');background-size:800px;background-repeat:repeat;color:var(--text);min-height:100vh;overflow-x:hidden}
+
+.bg-fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-fx .orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.06}
+.o1{width:500px;height:500px;top:-100px;right:-100px;background:var(--accent);animation:f1 20s infinite}
+.o2{width:400px;height:400px;bottom:-50px;left:-100px;background:var(--purple);animation:f2 25s infinite}
+.o3{width:300px;height:300px;top:40%;left:50%;background:var(--cyan);animation:f3 30s infinite}
+@keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(-60px,80px)}}
+@keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,-60px)}}
+@keyframes f3{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-50px)}}
+
+.app{position:relative;z-index:1;display:flex;min-height:100vh}
+
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:44px;left:0;bottom:0;z-index:10}
+.sb-brand{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-brand .ico{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--bg)}
+.sb-brand h1{font-size:15px;font-weight:600;letter-spacing:1px}
+.sb-brand h1 span{color:var(--accent)}
+.sb-nav{flex:1;padding:16px 10px;display:flex;flex-direction:column;gap:3px}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);color:var(--text2);cursor:pointer;transition:all .2s;font-size:13px;letter-spacing:.3px}
+.ni:hover{background:var(--bg3);color:var(--text)}
+.ni.on{background:var(--accent-g);color:var(--accent)}
+.ni .dt{width:6px;height:6px;border-radius:50%;background:currentColor}
+.sb-ft{padding:14px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);text-align:center}
+
+.mn{flex:1;margin-left:220px;padding:24px 28px;padding-top:68px}
+
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.hd h2{font-size:20px;font-weight:600}
+.hd h2 em{font-style:normal;color:var(--accent)}
+.hd-m{display:flex;align-items:center;gap:12px}
+.live{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.5}}
+.hd-m span{font-size:12px;color:var(--text2)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px}
+.sc .lb{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.sc .vl{font-size:26px;font-weight:700}
+.sc .ch{font-size:11px;color:var(--green)}
+
+.pnl{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:18px}
+.pnl-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.pnl-hd h3{font-size:14px;font-weight:600;letter-spacing:.5px}
+.tag{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--accent-g);color:var(--accent);letter-spacing:.5px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+.tc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .3s}
+.tc:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.tc-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tc-nm{font-size:14px;font-weight:600}
+.tc-bd{font-size:9px;padding:2px 8px;border-radius:20px;letter-spacing:.5px}
+.bd-em{background:rgba(96,165,250,.15);color:var(--blue)}
+.bd-gr{background:rgba(74,222,128,.15);color:var(--green)}
+.bd-ma{background:rgba(251,146,60,.15);color:var(--orange)}
+.bd-de{background:rgba(248,113,113,.15);color:var(--red)}
+.tc-sc{font-size:28px;font-weight:700;margin-bottom:4px}
+.tc-vl{font-size:11px;color:var(--text2)}
+.tc-cl{display:flex;gap:4px;margin-top:8px}
+.tc-cl .cd{width:16px;height:16px;border-radius:50%;border:1px solid var(--border)}
+.tc-sig{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.sig-r{display:flex;align-items:center;gap:8px}
+.sig-r .sn{font-size:10px;color:var(--text2);width:50px;flex-shrink:0}
+.sig-r .sbr{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
+.sig-r .sfl{height:100%;border-radius:3px;transition:width 1s ease}
+.sig-r .sv{font-size:10px;width:24px;text-align:right;color:var(--text2)}
+
+.ri{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.ri:last-child{border-bottom:none}
+.rn{flex:1;font-size:12px}
+.rn .arr{color:var(--accent);margin:0 6px}
+.rb{width:80px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.rf{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--green))}
+.rv{font-size:11px;color:var(--accent);width:36px;text-align:right}
+
+.pt{width:100%;border-collapse:collapse}
+.pt th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+.pt td{padding:10px;font-size:12px;border-bottom:1px solid var(--border)}
+.pt tr:hover td{background:var(--bg)}
+.pa{display:inline-flex;align-items:center;gap:4px}
+.pa.up{color:var(--green)}.pa.dn{color:var(--red)}
+
+.lt{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 10px;border-radius:20px}
+.lt.em{background:rgba(96,165,250,.12);color:var(--blue)}
+.lt.gr{background:rgba(74,222,128,.12);color:var(--green)}
+.lt.ma{background:rgba(251,146,60,.12);color:var(--orange)}
+.lt.de{background:rgba(248,113,113,.12);color:var(--red)}
+
+.nl{display:flex;flex-direction:column;gap:6px}
+.ni-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);background:var(--bg);border:1px solid var(--border);transition:border-color .2s}
+.ni-item:hover{border-color:var(--accent)}
+.nd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.nd.hi{background:var(--red)}.nd.md{background:var(--orange)}.nd.lo{background:var(--text3)}
+.nc{flex:1}
+.nt{font-size:12px;font-weight:500}
+.nm{font-size:10px;color:var(--text3);margin-top:2px}
+
+.sec{display:none}.sec.on{display:block}
+
+.ttip{position:fixed;display:none;z-index:100;background:var(--bg3);border:1px solid var(--border-l);border-radius:var(--rs);padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:300px;font-size:12px}
+.ttip .tn{font-size:14px;font-weight:600;margin-bottom:6px}
+.ttip .td{color:var(--text2);line-height:1.5;margin-bottom:8px}
+.ttip .tr{color:var(--accent);font-size:11px}
+
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:1024px){.sidebar{width:56px;top:44px}.sb-brand h1,.ni span,.sb-ft{display:none}.mn{margin-left:56px}.stats{grid-template-columns:repeat(2,1fr)}.g2,.g3{grid-template-columns:1fr}}
+
+/* === Hover & Transition Enhancements === */
+html{scroll-behavior:smooth}
+.pnl{transition:all .3s cubic-bezier(.16,1,.3,1)}
+.pnl:hover{box-shadow:0 8px 30px rgba(0,0,0,.12);border-color:rgba(212,165,116,.3)}
+.tc{transition:all .3s cubic-bezier(.16,1,.3,1);cursor:pointer}
+.tc:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1);border-color:rgba(212,165,116,.4)}
+.sc{transition:background .2s}
+.sc:hover{background:rgba(212,165,116,.08)}
+.ni{transition:all .2s}
+.ni:hover{background:rgba(212,165,116,.12);color:#b8875a}
+</style>
+</head>
+<body>
+<!-- 统一导航条 -->
+<div id="wm-nav" style="position:sticky;top:0;z-index:9999;background:rgba(44,36,20,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(245,240,232,.08);padding:0 24px">
+  <div style="max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:52px">
+    <a href="/" style="text-decoration:none;display:flex;align-items:baseline;gap:8px">
+      <span style="font-family:'Noto Serif SC',serif;font-size:14px;font-weight:700;color:#f5f0e8;letter-spacing:.1em">织觉引擎 WeaveMind</span>
+    </a>
+    <div style="display:flex;gap:6px">
+      <a href="/translator" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">审美翻译</a>
+      <a href="/spatial" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">空间感知</a>
+      <a href="/trend" style="padding:6px 14px;font-size:11px;color:#f5f0e8;background:rgba(245,240,232,.1);border-radius:3px;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;letter-spacing:.04em">趋势先知</a>
+      <a href="/gene" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">基因编辑</a>
+      <a href="/c2m.html" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">C2M体验</a>
+    </div>
+  </div>
+</div>
+<div class="bg-fx"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div class="app">
+  <div class="sidebar">
+    <div class="sb-brand"><div class="ico">TP</div><h1>Trend<span>Prophet</span></h1></div>
+    <div class="sb-nav" id="nav"></div>
+    <div class="sb-ft">织觉引擎 Module 3</div>
+  </div>
+  <div class="mn">
+    <div class="hd">
+      <h2><em>趋势先知</em>引擎</h2>
+      <div class="hd-m"><div class="live"></div><span>实时监测 &middot; <span id="date"></span></span></div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="sec on" id="sec-overview">
+      <div class="pnl">
+        <div class="pnl-hd"><h3>趋势全景图</h3><div class="tag">共 <span id="tcnt">0</span> 个趋势</div></div>
+        <div class="g3" id="tgrid"></div>
+      </div>
+    </div>
+    <div class="sec" id="sec-radar">
+      <div class="g2">
+        <div class="pnl"><div class="pnl-hd"><h3>六维信号雷达</h3><div class="tag">跨维度分析</div></div><div id="rch" style="height:400px"></div></div>
+        <div class="pnl"><div class="pnl-hd"><h3>维度详情</h3></div><div id="rdet"></div></div>
+      </div>
+    </div>
+    <div class="sec" id="sec-timeline">
+      <div class="pnl"><div class="pnl-hd"><h3>趋势生命周期</h3><div class="tag">16个月走势</div></div><div id="tch" style="height:400px"></div></div>
+      <div class="pnl"><div class="pnl-hd"><h3>趋势阶段分布</h3></div><div id="lch" style="height:260px"></div></div>
+    </div>
+    <div class="sec" id="sec-resonance">
+      <div class="g2">
+        <div class="pnl"><div class="pnl-hd"><h3>跨模态共振检测</h3><div class="tag">趋势耦合</div></div><div id="rlist"></div></div>
+        <div class="pnl"><div class="pnl-hd"><h3>共振热力图</h3></div><div id="hmch" style="height:360px"></div></div>
+      </div>
+    </div>
+    <div class="sec" id="sec-predictions">
+      <div class="pnl"><div class="pnl-hd"><h3>未来6个月趋势预测</h3><div class="tag">AI预测</div></div><div id="ptab"></div></div>
+      <div class="pnl"><div class="pnl-hd"><h3>预测对比</h3></div><div id="pch" style="height:340px"></div></div>
+    </div>
+    <div class="sec" id="sec-news">
+      <div class="pnl"><div class="pnl-hd"><h3>行业动态监测</h3><div class="tag">信号源</div></div><div class="nl" id="nlist"></div></div>
+    </div>
+  </div>
+</div>
+<div class="ttip" id="ttip"></div>
+<script>
+var API='/trend';
+var TD=[],RD={},RC=[],PD=[],ND=[];
+var DIM={social:'社交',fashion:'时尚',culture:'文化',economic:'经济',search:'搜索',design:'设计'};
+var LC={emerging:'萌芽',growth:'增长',mature:'成熟',declining:'衰退'};
+var LCC={emerging:'em',growth:'gr',mature:'ma',declining:'de'};
+var NAV=[{id:'overview',label:'趋势总览'},{id:'radar',label:'信号雷达'},{id:'timeline',label:'趋势时间线'},{id:'resonance',label:'共振检测'},{id:'predictions',label:'预测面板'},{id:'news',label:'行业动态'}];
+
+function sc(v){return v>=80?'var(--green)':v>=60?'var(--accent)':'var(--orange)'}
+
+window.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('date').textContent=new Date().toLocaleDateString('zh-CN');
+  renderNav();
+  Promise.all([
+    fetch(API+'/api/trends').then(function(r){return r.json()}),
+    fetch(API+'/api/radar').then(function(r){return r.json()}),
+    fetch(API+'/api/resonance').then(function(r){return r.json()}),
+    fetch(API+'/api/predictions').then(function(r){return r.json()}),
+    fetch(API+'/api/news').then(function(r){return r.json()})
+  ]).then(function(a){
+    TD=a[0].trends||[];RD=a[1].radar||{};RC=a[2].matrix||[];PD=a[3].predictions||[];ND=a[4].news||[];
+    renderStats();renderOverview();
+  }).catch(function(e){console.error('Load failed:',e)});
+});
+
+function renderNav(){
+  var el=document.getElementById('nav'),h='';
+  for(var i=0;i<NAV.length;i++) h+='<div class="ni'+(i===0?' on':'')+'" data-s="'+NAV[i].id+'"><div class="dt"></div><span>'+NAV[i].label+'</span></div>';
+  el.innerHTML=h;
+  var items=el.querySelectorAll('.ni');
+  for(var i=0;i<items.length;i++){
+    items[i].addEventListener('click',function(){
+      for(var j=0;j<items.length;j++) items[j].classList.remove('on');
+      this.classList.add('on');
+      var secs=document.querySelectorAll('.sec');
+      for(var j=0;j<secs.length;j++) secs[j].classList.remove('on');
+      var s=this.getAttribute('data-s');
+      document.getElementById('sec-'+s).classList.add('on');
+      if(s==='radar')renderRadar();
+      if(s==='timeline')renderTimeline();
+      if(s==='resonance')renderResonance();
+      if(s==='predictions')renderPredictions();
+      if(s==='news')renderNews();
+    });
+  }
+}
+
+function renderStats(){
+  if(!TD.length)return;
+  var avg=0,em=0,gr=0,ar=0;
+  for(var i=0;i<TD.length;i++){avg+=TD[i].score;if(TD[i].lifecycle==='emerging')em++;if(TD[i].lifecycle==='growth')gr++;ar+=TD[i].resonance_score;}
+  avg=Math.round(avg/TD.length);ar=Math.round(ar/TD.length);
+  document.getElementById('stats').innerHTML=
+    '<div class="sc"><div class="lb">平均趋势分</div><div class="vl">'+avg+'</div><div class="ch">&#9650; 8.2</div></div>'+
+    '<div class="sc"><div class="lb">萌芽期</div><div class="vl">'+em+'</div><div class="ch">新兴机会</div></div>'+
+    '<div class="sc"><div class="lb">增长期</div><div class="vl">'+gr+'</div><div class="ch">稳健增长</div></div>'+
+    '<div class="sc"><div class="lb">平均共振</div><div class="vl">'+ar+'</div><div class="ch">多维验证</div></div>';
+  document.getElementById('tcnt').textContent=TD.length;
+}
+
+function renderOverview(){
+  var el=document.getElementById('tgrid');
+  if(!TD.length){el.innerHTML='<p style="color:var(--text3)">暂无数据</p>';return;}
+  var h='';
+  for(var i=0;i<TD.length;i++){
+    var t=TD[i],lc=LCC[t.lifecycle]||'gr';
+    h+='<div class="tc" data-id="'+t.id+'">';
+    h+='<div class="tc-hd"><div class="tc-nm">'+t.name+'</div><div class="tc-bd bd-'+lc+'">'+(LC[t.lifecycle]||t.lifecycle)+'</div></div>';
+    h+='<div class="tc-sc" style="color:'+sc(t.score)+'">'+t.score+'</div>';
+    h+='<div class="tc-vl">增速 '+(t.velocity>0?'+':'')+t.velocity+'%/月 &middot; 共振 '+t.resonance_score+'</div>';
+    h+='<div class="tc-cl">';
+    var cp=t.color_palette||[];
+    for(var j=0;j<cp.length&&j<5;j++) h+='<div class="cd" style="background:'+cp[j]+'"></div>';
+    h+='</div><div class="tc-sig">';
+    var sigs=t.signals||{},keys=Object.keys(sigs);
+    for(var j=0;j<keys.length;j++){var k=keys[j],v=sigs[k];
+      h+='<div class="sig-r"><span class="sn">'+(DIM[k]||k)+'</span><div class="sbr"><div class="sfl" style="width:'+v+'%;background:'+sc(v)+'"></div></div><span class="sv">'+v+'</span></div>';}
+    h+='</div></div>';
+  }
+  el.innerHTML=h;
+  var cards=el.querySelectorAll('.tc');
+  for(var i=0;i<cards.length;i++){
+    cards[i].addEventListener('click',function(){
+      var self=this;
+      fetch(API+'/api/trends/'+this.getAttribute('data-id')).then(function(r){return r.json()}).then(function(d){
+        var tt=document.getElementById('ttip'),r=self.getBoundingClientRect();
+        tt.innerHTML='<div class="tn">'+d.name+' ('+d.name_en+')</div><div class="td">'+d.description+'</div><div class="tr">'+d.recommendation+'</div>';
+        tt.style.display='block';tt.style.left=Math.min(r.right+10,window.innerWidth-320)+'px';tt.style.top=r.top+'px';
+        setTimeout(function(){tt.style.display='none'},5000);
+      });
+    });
+  }
+}
+
+function renderRadar(){
+  if(!Object.keys(RD).length||typeof echarts==='undefined')return;
+  var ch=echarts.init(document.getElementById('rch'),'dark');
+  var dims=Object.keys(RD),ind=[],vals=[];
+  for(var i=0;i<dims.length;i++){ind.push({name:RD[dims[i]].name,max:100});vals.push(RD[dims[i]].avg_score);}
+  ch.setOption({backgroundColor:'transparent',radar:{indicator:ind,shape:'polygon',axisLine:{lineStyle:{color:'#252540'}},splitLine:{lineStyle:{color:'#1a1a2e'}},splitArea:{areaStyle:{color:['rgba(201,169,110,.02)','rgba(201,169,110,.05)']}},axisName:{color:'#a09b92',fontSize:11}},series:[{type:'radar',data:[{value:vals,name:'平均信号',areaStyle:{color:'rgba(201,169,110,.15)'},lineStyle:{color:'#c9a96e',width:2},itemStyle:{color:'#c9a96e'}}]}],tooltip:{trigger:'item'}});
+  var h='';
+  for(var i=0;i<dims.length;i++){var v=RD[dims[i]];
+    h+='<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:600">'+v.name+'</span><span style="font-size:12px;color:var(--accent)">'+v.avg_score+'</span></div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">最强: '+v.max_trend+' ('+v.max_score+')</div><div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden"><div style="width:'+v.avg_score+'%;height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px"></div></div></div>';}
+  document.getElementById('rdet').innerHTML=h;
+}
+
+function renderTimeline(){
+  if(!TD.length||typeof echarts==='undefined')return;
+  var ch=echarts.init(document.getElementById('tch'),'dark');
+  var cols=['#c9a96e','#4ade80','#60a5fa','#f87171','#a78bfa','#fb923c','#22d3ee','#f472b6'];
+  var series=[],months=[],pending=0;
+  for(var i=0;i<TD.length&&i<8;i++){pending++;(function(idx){
+    fetch(API+'/api/timeline/'+TD[idx].id).then(function(r){return r.json()}).then(function(d){
+      if(idx===0)months=d.months||[];
+      series.push({name:d.name,type:'line',smooth:true,symbol:'circle',symbolSize:4,lineStyle:{width:2},itemStyle:{color:cols[idx%cols.length]},data:d.data||[]});
+      pending--;if(pending===0) drawTL(ch,months,series);
+    }).catch(function(){pending--;if(pending===0) drawTL(ch,months,series);});
+  })(i);}
+  var lc=echarts.init(document.getElementById('lch'),'dark');
+  var ld=[{name:'萌芽期',value:0,itemStyle:{color:'#60a5fa'}},{name:'增长期',value:0,itemStyle:{color:'#4ade80'}},{name:'成熟期',value:0,itemStyle:{color:'#fb923c'}},{name:'衰退期',value:0,itemStyle:{color:'#f87171'}}];
+  for(var i=0;i<TD.length;i++){if(TD[i].lifecycle==='emerging')ld[0].value++;else if(TD[i].lifecycle==='growth')ld[1].value++;else if(TD[i].lifecycle==='mature')ld[2].value++;else if(TD[i].lifecycle==='declining')ld[3].value++;}
+  lc.setOption({backgroundColor:'transparent',tooltip:{trigger:'item'},series:[{type:'pie',radius:['45%','70%'],label:{color:'#a09b92',fontSize:12},data:ld}]});
+}
+function drawTL(ch,months,series){ch.setOption({backgroundColor:'transparent',tooltip:{trigger:'axis'},legend:{top:0,textStyle:{color:'#a09b92',fontSize:11},itemWidth:16,itemHeight:2},grid:{top:40,right:20,bottom:30,left:40},xAxis:{type:'category',data:months,boundaryGap:false,axisLine:{lineStyle:{color:'#1a1a2e'}},axisLabel:{color:'#6b6660',fontSize:10,rotate:30}},yAxis:{type:'value',min:0,max:100,axisLine:{show:false},splitLine:{lineStyle:{color:'#1a1a2e'}},axisLabel:{color:'#6b6660',fontSize:10}},series:series});}
+
+function renderResonance(){
+  var el=document.getElementById('rlist'),h='',list=RC||[];
+  for(var i=0;i<list.length&&i<10;i++){var r=list[i];
+    h+='<div class="ri"><div class="rn">'+r.trend_a+' <span class="arr">&harr;</span> '+r.trend_b+'</div><div class="rb"><div class="rf" style="width:'+(r.resonance*100)+'%"></div></div><div class="rv">'+Math.round(r.resonance*100)+'%</div></div>';}
+  el.innerHTML=h;
+  if(typeof echarts==='undefined')return;
+  var hm=echarts.init(document.getElementById('hmch'),'dark');
+  var names=[];for(var i=0;i<TD.length;i++)names.push(TD[i].name);
+  var hd=[];
+  for(var i=0;i<TD.length;i++)for(var j=0;j<TD.length;j++){var v=0;
+    if(i===j)v=100;else{for(var k=0;k<list.length;k++){if((list[k].trend_a===TD[i].name&&list[k].trend_b===TD[j].name)||(list[k].trend_a===TD[j].name&&list[k].trend_b===TD[i].name)){v=Math.round(list[k].resonance*100);break;}}}
+    hd.push([j,i,v]);}
+  hm.setOption({backgroundColor:'transparent',tooltip:{formatter:function(p){return names[p.data[0]]+' &harr; '+names[p.data[1]]+'<br/>共振: '+p.data[2]+'%'}},grid:{top:10,right:10,bottom:60,left:80},xAxis:{type:'category',data:names,axisLabel:{color:'#6b6660',fontSize:10,rotate:30}},yAxis:{type:'category',data:names,axisLabel:{color:'#6b6660',fontSize:10}},visualMap:{min:0,max:100,show:true,orient:'horizontal',bottom:0,left:'center',inRange:{color:['#0d0d14','#1a1a2e','#2d2520','#c9a96e']},textStyle:{color:'#6b6660',fontSize:10}},series:[{type:'heatmap',data:hd,label:{show:true,color:'#a09b92',fontSize:9},emphasis:{itemStyle:{shadowBlur:10,shadowColor:'rgba(201,169,110,.5)'}}}]});
+}
+
+function renderPredictions(){
+  var list=PD||[],h='<table class="pt"><thead><tr><th>趋势</th><th>当前</th><th>6月后</th><th>变化</th><th>置信度</th><th>阶段</th><th>峰值</th></tr></thead><tbody>';
+  for(var i=0;i<list.length;i++){var p=list[i],d=p.predicted_score-p.current_score,cc=p.confidence>80?'var(--green)':p.confidence>60?'var(--orange)':'var(--red)',lc=LCC[p.lifecycle]||'gr';
+    h+='<tr><td style="font-weight:600">'+p.name+'</td><td>'+p.current_score+'</td><td style="font-weight:700;color:var(--accent)">'+p.predicted_score+'</td><td><span class="pa '+(d>=0?'up':'dn')+'">'+(d>=0?'&#9650;':'&#9660;')+' '+(d>=0?'+':'')+d.toFixed(1)+'</span></td><td><span style="color:'+cc+'">'+p.confidence+'%</span></td><td><span class="lt '+lc+'">'+LC[p.lifecycle]+'</span></td><td style="color:var(--text2)">'+p.peak_month+'</td></tr>';}
+  h+='</tbody></table>';document.getElementById('ptab').innerHTML=h;
+  if(typeof echarts==='undefined')return;
+  var pc=echarts.init(document.getElementById('pch'),'dark');
+  var cols=['#c9a96e','#4ade80','#60a5fa','#f87171','#a78bfa','#fb923c','#22d3ee','#f472b6'],names=[],cur=[],pred=[];
+  for(var i=0;i<list.length;i++){names.push(list[i].name);cur.push({value:list[i].current_score,itemStyle:{color:cols[i%cols.length],opacity:.5}});pred.push({value:list[i].predicted_score,itemStyle:{color:cols[i%cols.length]}});}
+  pc.setOption({backgroundColor:'transparent',tooltip:{trigger:'axis'},legend:{top:0,textStyle:{color:'#a09b92',fontSize:11},itemWidth:16,itemHeight:2},grid:{top:40,right:20,bottom:30,left:40},xAxis:{type:'category',data:names,axisLabel:{color:'#6b6660',fontSize:10,rotate:20}},yAxis:{type:'value',min:50,max:100,axisLine:{show:false},splitLine:{lineStyle:{color:'#1a1a2e'}},axisLabel:{color:'#6b6660',fontSize:10}},series:[{name:'当前分',type:'bar',barWidth:20,data:cur},{name:'6月后',type:'bar',barWidth:20,data:pred}]});
+}
+
+function renderNews(){
+  var list=ND||[],h='';
+  for(var i=0;i<list.length;i++){var n=list[i],cls=n.impact==='high'?'hi':n.impact==='medium'?'md':'lo';
+    h+='<div class="ni-item"><div class="nd '+cls+'"></div><div class="nc"><div class="nt">'+n.title+'</div><div class="nm">'+n.source+' &middot; '+n.date+'</div></div></div>';}
+  document.getElementById('nlist').innerHTML=h;
+}
+</script>
+</body>
+</html>

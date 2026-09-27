@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C2M消费体验 — 织觉引擎 WeaveMind</title>
+<style>
+:root{--bg:#f5f0e8;--fg:#2c2420;--gold:#8b6914;--green:#5a6e5a}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Serif SC',Georgia,serif;background:var(--bg);color:var(--fg);line-height:1.8;-webkit-font-smoothing:antialiased;padding-top:0;background-image:url('/assets/bg-c2m-light.png');background-size:800px;background-repeat:repeat}
+.container{max-width:900px;margin:0 auto;padding:16px 24px}
+/* 统一导航 */
+.unified-nav{position:sticky;top:0;height:52px;background:rgba(44,36,20,.92);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 24px;z-index:1000;gap:24px;border-bottom:1px solid rgba(245,240,232,.08)}
+.unified-nav .nav-logo{font-size:14px;font-weight:700;color:#f5f0e8;letter-spacing:.1em}
+.unified-nav a{color:rgba(245,240,232,.6);font-size:11px;text-decoration:none;font-family:system-ui,sans-serif;white-space:nowrap;transition:color .2s}
+.unified-nav a:hover{color:#f5f0e8}
+.unified-nav a.active{background:rgba(245,240,232,.1);color:#f5f0e8;font-weight:600}
+.back{display:inline-block;margin-bottom:16px;font-size:13px;opacity:.4;text-decoration:none}.back:hover{opacity:1}
+.header{text-align:center;margin-bottom:40px;padding-top:0}
+.header h1{font-size:32px;font-weight:800;margin-bottom:8px;letter-spacing:.04em}
+.header p{color:rgba(44,36,20,.6);font-size:14px;line-height:1.8}
+
+/* ── 步骤指示器 ── */
+.steps-indicator{
+  display:flex;justify-content:center;gap:0;margin-bottom:40px;
+  position:sticky;top:52px;z-index:100;background:rgba(245,240,232,.95);padding:14px 0;
+  border-bottom:1px solid rgba(44,36,20,.06);backdrop-filter:blur(8px);
+}
+.step-dot{
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;background:rgba(44,36,20,.06);color:rgba(44,36,20,.25);
+  transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;cursor:pointer;
+}
+.step-dot:hover{transform:scale(1.1);background:rgba(44,36,20,.1)}
+.step-dot.active{background:var(--fg);color:var(--bg);animation:stepPulse 2s ease-in-out infinite}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 0 rgba(44,36,20,.3)}50%{box-shadow:0 0 0 6px rgba(44,36,20,0)}}
+.step-dot.done{background:var(--green);color:#fff}
+.step-line{width:40px;height:2px;background:rgba(44,36,20,.06);align-self:center}
+.step-line.done{background:var(--green)}
+.step-dot .tooltip{
+  position:absolute;top:44px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;font-size:10px;opacity:0;transition:opacity .2s;
+  background:var(--fg);color:var(--bg);padding:4px 10px;border-radius:4px;
+  pointer-events:none;
+}
+.step-dot:hover .tooltip{opacity:1}
+
+/* ── 步骤内容 ── */
+.step-content{display:none;animation:fadeIn .5s ease}
+.step-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.step-title{font-size:22px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.step-subtitle{color:rgba(44,36,20,.4);font-size:13px;margin-bottom:24px}
+
+.panel{
+  background:rgba(255,255,255,.5);border:1px solid rgba(44,36,20,.06);
+  border-radius:14px;padding:28px;margin-bottom:20px;
+  transition:all .35s cubic-bezier(.16,1,.3,1);
+}
+.panel:hover{
+  background:rgba(255,255,255,.7);
+  box-shadow:0 8px 32px rgba(44,36,20,.06);
+  transform:translateY(-2px);
+}
+
+/* ── 趋势选择 ── */
+.trend-options{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.trend-opt{
+  padding:16px;border:1px solid rgba(44,36,20,.08);border-radius:10px;
+  cursor:pointer;transition:all .35s cubic-bezier(.16,1,.3,1);background:rgba(255,255,255,.4);
+}
+.trend-opt:hover{border-color:rgba(44,36,20,.2);background:rgba(255,255,255,.7);transform:translateY(-2px);box-shadow:0 4px 16px rgba(44,36,20,.06)}
+.trend-opt.selected{border-color:var(--fg);background:rgba(44,36,20,.03)}
+.trend-opt .t-name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.trend-opt .t-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.trend-opt .t-desc{font-size:11px;opacity:.4;margin-top:4px}
+.trend-opt .t-score{font-size:24px;font-weight:800;float:right;margin-top:-8px}
+
+/* ── DNA滑块 ── */
+.dna-sliders{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.dna-sliders{grid-template-columns:1fr}}
+.slider-item label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.slider-item label .icon{font-size:14px}
+.slider-item label .val{opacity:.3;font-family:monospace}
+input[type=range]{width:100%;height:5px;-webkit-appearance:none;background:rgba(44,36,20,.08);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--fg);cursor:pointer;border:2px solid var(--bg)}
+
+/* ── 房间选择 ── */
+.room-options{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.room-opt{
+  padding:16px;border:1px solid rgba(44,36,20,.08);border-radius:10px;
+  cursor:pointer;transition:all .35s cubic-bezier(.16,1,.3,1);text-align:center;background:rgba(255,255,255,.4);
+}
+.room-opt:hover{border-color:rgba(44,36,20,.2);transform:translateY(-2px);box-shadow:0 4px 16px rgba(44,36,20,.06)}
+.room-opt.selected{border-color:var(--green);background:rgba(90,110,90,.04)}
+.room-opt .r-icon{font-size:32px;display:block;margin-bottom:6px}
+.room-opt .r-name{font-size:13px;font-weight:600}
+
+/* ── 花型预览 ── */
+.pattern-preview-wrap{
+  margin-top:20px;display:none;animation:fadeIn .5s ease;
+}
+.pattern-preview-wrap.show{display:block}
+.pattern-preview-wrap h4{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.pattern-preview-img{
+  width:100%;max-width:480px;margin:0 auto;display:block;
+  border-radius:12px;border:1px solid rgba(44,36,20,.08);
+  box-shadow:0 8px 40px rgba(44,36,20,.12);
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+}
+.pattern-preview-img:hover{transform:scale(1.02)}
+.pattern-meta{
+  display:flex;justify-content:center;gap:24px;margin-top:12px;
+  font-size:11px;opacity:.4;
+}
+.dna-mini-chart{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:16px;
+}
+.dna-mini-item{
+  text-align:center;padding:8px 4px;background:rgba(44,36,20,.03);border-radius:8px;
+}
+.dna-mini-item .dm-val{font-size:18px;font-weight:700;display:block}
+.dna-mini-item .dm-label{font-size:9px;opacity:.3;display:block;margin-top:2px}
+
+/* ── 面料选择 ── */
+.textile-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.textile-opt{
+  padding:12px;border:1px solid rgba(44,36,20,.08);border-radius:8px;
+  cursor:pointer;transition:all .35s cubic-bezier(.16,1,.3,1);text-align:center;background:rgba(255,255,255,.4);
+  font-size:12px;
+}
+.textile-opt:hover{border-color:rgba(44,36,20,.2);transform:translateY(-2px);box-shadow:0 4px 16px rgba(44,36,20,.06)}
+.textile-opt.selected{border-color:var(--gold);background:rgba(139,105,20,.04)}
+.textile-opt .tex-icon{font-size:24px;display:block;margin-bottom:4px}
+
+/* ── 按钮 ── */
+.actions{display:flex;gap:12px;margin-top:24px}
+.btn{
+  flex:1;padding:14px;border:none;border-radius:10px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:600;
+  transition:all .35s cubic-bezier(.16,1,.3,1);
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(44,36,20,.1)}
+.btn:active{transform:translateY(0)}
+.btn-primary{background:var(--fg);color:var(--bg)}
+.btn-primary:hover{background:#1a1612}
+.btn-secondary{background:rgba(44,36,20,.06);color:var(--fg)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+
+/* ── 结果展示 ── */
+.result-box{
+  text-align:center;padding:40px;background:rgba(255,255,255,.6);
+  border:1px solid rgba(44,36,20,.06);border-radius:14px;
+  box-shadow:0 8px 40px rgba(44,36,20,.06);
+}
+.result-box .icon{font-size:48px;margin-bottom:16px;display:block}
+.result-box h3{font-size:20px;font-weight:700;margin-bottom:8px}
+.result-box p{color:rgba(44,36,20,.4);font-size:13px;margin-bottom:20px}
+.result-stats{display:flex;justify-content:center;gap:32px;margin-bottom:24px}
+.result-stats .stat{text-align:center}
+.result-stats .num{font-size:28px;font-weight:800;display:block}
+.result-stats .label{font-size:10px;opacity:.3}
+
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left}
+.summary-grid>img{grid-column:1/-1;max-width:100%;border-radius:12px}
+.summary-item{padding:16px;background:rgba(44,36,20,.02);border-radius:10px}
+.summary-item .s-label{font-size:11px;opacity:.3;margin-bottom:4px}
+.summary-item .s-value{font-size:14px;font-weight:600}
+
+.loading-overlay{
+  position:fixed;inset:0;background:rgba(245,240,232,.92);z-index:1000;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  backdrop-filter:blur(8px);
+}
+.loading-overlay.show{display:flex}
+.loading-overlay .spinner{
+  width:48px;height:48px;border:3px solid rgba(44,36,20,.08);
+  border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;
+  margin-bottom:20px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay p{font-size:14px;color:rgba(44,36,20,.6);letter-spacing:.04em}
+</style>
+</head>
+<body>
+
+<!-- 统一导航 -->
+<nav class="unified-nav">
+  <span class="nav-logo">织觉引擎 WeaveMind</span>
+  <a href="/" target="_blank">首页</a>
+  <a href="/translator" target="_blank">审美翻译</a>
+  <a href="/spatial" target="_blank">空间感知</a>
+  <a href="/trend" target="_blank">趋势先知</a>
+  <a href="/gene" target="_blank">基因编辑</a>
+  <a href="/c2m.html" class="active">C2M体验</a>
+</nav>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p id="loadingText">AI正在生成...</p>
+</div>
+
+<div class="container">
+  <a href="/" class="back">← 返回织觉引擎</a>
+
+  <div class="header">
+    <h1>C2M消费体验</h1>
+    <p>从趋势洞察到空间预览，体验AI赋能的家纺消费新方式</p>
+  </div>
+
+  <!-- 步骤指示器 -->
+  <div class="steps-indicator">
+    <div class="step-dot active" onclick="goStep(1)">1<span class="tooltip">趋势选择</span></div>
+    <div class="step-line"></div>
+    <div class="step-dot" onclick="goStep(2)">2<span class="tooltip">设计共创</span></div>
+    <div class="step-line"></div>
+    <div class="step-dot" onclick="goStep(3)">3<span class="tooltip">空间选择</span></div>
+    <div class="step-line"></div>
+    <div class="step-dot" onclick="goStep(4)">4<span class="tooltip">完成</span></div>
+  </div>
+
+  <!-- Step 1: 趋势选择 -->
+  <div class="step-content active" id="step1">
+    <div class="step-title">第一步：选择你感兴趣的风格趋势</div>
+    <div class="step-subtitle">AI基于6维信号分析，为你推荐当前最热门的家纺趋势</div>
+    <div class="panel">
+      <div class="trend-options" id="trendOptions"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="nextStep(2)" id="btn1" disabled>下一步 →</button>
+    </div>
+  </div>
+
+  <!-- Step 2: DNA设计 -->
+  <div class="step-content" id="step2">
+    <div class="step-title">第二步：编辑你的审美DNA</div>
+    <div class="step-subtitle">调整8个维度，创造属于你的独一无二花型设计</div>
+    <div class="panel">
+      <div class="dna-sliders" id="dnaSliders"></div>
+    </div>
+    <!-- 花型预览区 -->
+    <div class="pattern-preview-wrap" id="patternPreview">
+      <h4>你的专属花型设计</h4>
+      <img class="pattern-preview-img" id="patternImg" src="" alt="AI生成花型">
+      <div class="pattern-meta">
+        <span>模型: wanx2.1-t2i-turbo</span>
+        <span id="patternSize">1024×1024</span>
+        <span id="patternTime"></span>
+      </div>
+      <div class="dna-mini-chart" id="dnaMiniChart"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="goStep(1)">← 上一步</button>
+      <button class="btn btn-gold" onclick="generateDesign()">AI生成花型</button>
+      <button class="btn btn-primary" onclick="nextStep(3)" id="btn2" disabled>下一步 →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: 房间选择 -->
+  <div class="step-content" id="step3">
+    <div class="step-title">第三步：选择你的空间</div>
+    <div class="step-subtitle">选择一个房间风格，AI将为你生成搭配效果</div>
+    <div class="panel">
+      <div class="room-options" id="roomOptions">
+        <div class="room-opt selected" onclick="selectRoom('modern',this)"><span class="r-icon" style="font-size:28px;color:var(--fg);opacity:.3">01</span><div class="r-name">现代客厅</div></div>
+        <div class="room-opt" onclick="selectRoom('bedroom',this)"><span class="r-icon" style="font-size:28px;color:var(--fg);opacity:.3">02</span><div class="r-name">温馨卧室</div></div>
+        <div class="room-opt" onclick="selectRoom('chinese',this)"><span class="r-icon" style="font-size:28px;color:var(--fg);opacity:.3">03</span><div class="r-name">中式雅居</div></div>
+        <div class="room-opt" onclick="selectRoom('nordic',this)"><span class="r-icon" style="font-size:28px;color:var(--fg);opacity:.3">04</span><div class="r-name">北欧风格</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="step-title" style="font-size:15px;margin-bottom:12px">选择面料风格</div>
+      <div class="textile-options" id="textileOptions">
+        <div class="textile-opt selected" onclick="selectTextile('chinese_ink',this)"><span class="tex-icon" style="font-weight:700;opacity:.3">01</span>水墨江南</div>
+        <div class="textile-opt" onclick="selectTextile('nordic_minimal',this)"><span class="tex-icon" style="font-weight:700;opacity:.3">02</span>北欧极简</div>
+        <div class="textile-opt" onclick="selectTextile('japanese_wabi',this)"><span class="tex-icon" style="font-weight:700;opacity:.3">03</span>侘寂之美</div>
+        <div class="textile-opt" onclick="selectTextile('french_roma',this)"><span class="tex-icon" style="font-weight:700;opacity:.3">04</span>法式浪漫</div>
+        <div class="textile-opt" onclick="selectTextile('modern_abstract',this)"><span class="tex-icon" style="font-weight:700;opacity:.3">05</span>现代艺术</div>
+        <div class="textile-opt" onclick="selectTextile('luxury_velvet',this)"><span class="tex-icon" style="font-weight:700;opacity:.3">06</span>奢华丝绒</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="goStep(2)">← 上一步</button>
+      <button class="btn btn-green" onclick="generatePreview()">生成搭配预览</button>
+      <button class="btn btn-primary" onclick="nextStep(4)" id="btn3" disabled>查看结果 →</button>
+    </div>
+  </div>
+
+  <!-- Step 4: 结果 -->
+  <div class="step-content" id="step4">
+    <div class="result-box">
+      <span class="icon" style="font-size:48px;opacity:.15">04</span>
+      <h3>你的个性化方案已生成！</h3>
+      <p>基于你的审美偏好和空间需求，AI为你定制了专属家纺方案</p>
+      <div class="result-stats">
+        <div class="stat"><span class="num" id="resultScore">--</span><span class="label">搭配评分</span></div>
+        <div class="stat"><span class="num" id="resultTime">--</span><span class="label">生成耗时</span></div>
+        <div class="stat"><span class="num">C2M</span><span class="label">定制模式</span></div>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div class="actions" style="margin-top:24px">
+        <button class="btn btn-secondary" onclick="resetAll()">重新定制</button>
+        <button class="btn btn-gold" onclick="alert('感谢！C2M按需生产订单已提交，预计7个工作日发货。')">立即下单</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TRENDS = [
+  {id:'wabi_sabi',name:'侘寂美学',color:'#8b7d6b',score:87,desc:'自然朴素、手工质感、大地色调',dna:{color_warmth:70,saturation:20,pattern_complex:15,texture_feel:75,style_modern:30,material_weight:55,luminosity:15,organic_ratio:90}},
+  {id:'dopamine',name:'多巴胺家居',color:'#ff6b6b',score:79,desc:'高饱和、明亮撞色、快乐活力',dna:{color_warmth:65,saturation:95,pattern_complex:60,texture_feel:25,style_modern:85,material_weight:30,luminosity:70,organic_ratio:15}},
+  {id:'quiet_lux',name:'静奢风',color:'#d4c9b8',score:82,desc:'低调奢华、高支纯色、触感高级',dna:{color_warmth:40,saturation:10,pattern_complex:5,texture_feel:30,style_modern:55,material_weight:45,luminosity:60,organic_ratio:65}},
+  {id:'soft_min',name:'温柔极简',color:'#c5b9a8',score:85,desc:'奶油色、燕麦色、柔软触感',dna:{color_warmth:60,saturation:15,pattern_complex:5,texture_feel:40,style_modern:45,material_weight:35,luminosity:40,organic_ratio:60}},
+  {id:'eco',name:'可持续革新',color:'#228b22',score:80,desc:'再生纤维、有机棉、绿色制造',dna:{color_warmth:50,saturation:30,pattern_complex:25,texture_feel:60,style_modern:50,material_weight:50,luminosity:20,organic_ratio:95}},
+  {id:'cyber_cn',name:'新赛博中式',color:'#ff0040',score:71,desc:'传统纹样+未来科技、霓虹水墨',dna:{color_warmth:50,saturation:80,pattern_complex:75,texture_feel:35,style_modern:80,material_weight:40,luminosity:85,organic_ratio:40}}
+];
+
+const DIMS = [
+  {key:'color_warmth',name:'色彩温度',icon:'',labels:['冷调','暖调']},
+  {key:'saturation',name:'饱和度',icon:'',labels:['素雅','艳丽']},
+  {key:'pattern_complex',name:'图案复杂度',icon:'',labels:['极简','繁复']},
+  {key:'texture_feel',name:'织物肌理',icon:'',labels:['光滑','粗糙']},
+  {key:'style_modern',name:'风格倾向',icon:'⚡',labels:['传统','现代']},
+  {key:'material_weight',name:'材质厚薄',icon:'',labels:['轻薄','厚重']},
+  {key:'luminosity',name:'光泽度',icon:'',labels:['哑光','高光']},
+  {key:'organic_ratio',name:'自然感',icon:'',labels:['人工','天然']}
+];
+
+let currentDNA = {};
+let selectedTrend = null;
+let selectedRoom = 'modern';
+let selectedTextile = 'chinese_ink';
+let startTime = 0;
+
+// 初始化
+function init() {
+  // 趋势选项
+  const tDiv = document.getElementById('trendOptions');
+  tDiv.innerHTML = TRENDS.map(t => `
+    <div class="trend-opt" id="trend_${t.id}" onclick="selectTrend('${t.id}')">
+      <div class="t-name"><span class="t-dot" style="background:${t.color}"></span>${t.name}</div>
+      <span class="t-score">${t.score}</span>
+      <div class="t-desc">${t.desc}</div>
+    </div>
+  `).join('');
+
+  // DNA滑块
+  const sDiv = document.getElementById('dnaSliders');
+  sDiv.innerHTML = DIMS.map(d => `
+    <div class="slider-item">
+      <label><span class="icon">${d.icon}</span> ${d.name} <span class="val" id="c2m_val_${d.key}">50</span></label>
+      <input type="range" min="0" max="100" value="50" id="c2m_${d.key}" oninput="updateC2MVal('${d.key}',this.value)">
+    </div>
+  `).join('');
+
+  // 默认DNA
+  DIMS.forEach(d => currentDNA[d.key] = 50);
+}
+
+function selectTrend(tid) {
+  selectedTrend = TRENDS.find(t=>t.id===tid);
+  document.querySelectorAll('.trend-opt').forEach(e=>e.classList.remove('selected'));
+  document.getElementById(`trend_${tid}`).classList.add('selected');
+  // 自动填充DNA
+  if(selectedTrend && selectedTrend.dna){
+    currentDNA = {...selectedTrend.dna};
+    DIMS.forEach(d => {
+      const slider = document.getElementById(`c2m_${d.key}`);
+      if(slider) { slider.value = currentDNA[d.key]; document.getElementById(`c2m_val_${d.key}`).textContent = currentDNA[d.key]; }
+    });
+  }
+  document.getElementById('btn1').disabled = false;
+}
+
+function updateC2MVal(k, v) {
+  document.getElementById(`c2m_val_${k}`).textContent = v;
+  currentDNA[k] = parseInt(v);
+}
+
+function selectRoom(r, el) {
+  selectedRoom = r;
+  document.querySelectorAll('.room-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectTextile(t, el) {
+  selectedTextile = t;
+  document.querySelectorAll('.textile-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function goStep(n) {
+  document.querySelectorAll('.step-content').forEach(e=>e.classList.remove('active'));
+  document.getElementById(`step${n}`).classList.add('active');
+  document.querySelectorAll('.step-dot').forEach((d,i)=>{
+    d.classList.remove('active','done');
+    if(i+1===n) d.classList.add('active');
+    if(i+1<n) d.classList.add('done');
+  });
+  document.querySelectorAll('.step-line').forEach((l,i)=>{
+    l.classList.toggle('done',i<n-1);
+  });
+}
+
+function nextStep(n) {
+  goStep(n);
+}
+
+async function generateDesign() {
+  showLoading('AI正在根据你的审美DNA生成花型设计...');
+  startTime = Date.now();
+
+  try {
+    // 调用基因编辑器后端生成图片（后端已内置轮询，会阻塞直到图片就绪）
+    var resp = await fetch('/gene/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({dna: currentDNA, custom_desc: ''})
+    });
+    var data = await resp.json();
+
+    if(!data.success) {
+      throw new Error(data.error || '生成失败');
+    }
+
+    hideLoading();
+    var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    // 显示生成的图片
+    var previewWrap = document.getElementById('patternPreview');
+    var img = document.getElementById('patternImg');
+    img.src = '/gene' + data.image_url;
+    document.getElementById('patternTime').textContent = '耗时: ' + elapsed + 's';
+    previewWrap.classList.add('show');
+
+    // 显示DNA迷你图
+    var dimKeys = ['color_warmth','saturation','pattern_complex','texture_feel','style_modern','material_weight','luminosity','organic_ratio'];
+    var dimNames = ['色温','饱和度','复杂度','肌理','风格','厚薄','光泽','自然感'];
+    var miniHtml = '';
+    for(var i=0; i<dimKeys.length; i++){
+      miniHtml += '<div class="dna-mini-item"><span class="dm-val">' + (currentDNA[dimKeys[i]]||50) + '</span><span class="dm-label">' + dimNames[i] + '</span></div>';
+    }
+    document.getElementById('dnaMiniChart').innerHTML = miniHtml;
+
+    // 滚动到预览区域
+    previewWrap.scrollIntoView({behavior:'smooth', block:'center'});
+
+    document.getElementById('btn2').disabled = false;
+  } catch(e) {
+    hideLoading();
+    alert('⚠️ 生成失败: ' + e.message + '\n\n请确认基因编辑器服务(port:5003)已启动。');
+  }
+}
+
+async function generatePreview() {
+  showLoading('AI正在生成空间搭配预览...');
+  var previewStart = Date.now();
+
+  try {
+    // 第一步：AI生成房间
+    showLoading('AI正在生成房间空间...');
+    var roomResp = await fetch('/spatial/api/generate-room', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({style: selectedRoom, description: ''})
+    });
+    var roomData = await roomResp.json();
+    if(roomData.error) throw new Error(roomData.error);
+
+    // 第二步：将窗帘花型合成到房间中
+    showLoading('AI正在合成窗帘搭配效果...');
+    var previewResp = await fetch('/spatial/api/preview-textile', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({room_image: roomData.filename, textile_id: selectedTextile, custom_prompt: ''})
+    });
+    var previewData = await previewResp.json();
+    if(previewData.error) throw new Error(previewData.error);
+
+    // 第三步：评估搭配效果
+    var evalResp = await fetch('/spatial/api/evaluate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({room_style: selectedRoom, textile_id: selectedTextile, custom_prompt: ''})
+    });
+    var evalData = await evalResp.json();
+
+    hideLoading();
+    var elapsed = ((Date.now() - previewStart) / 1000).toFixed(1);
+
+    // 生成结果
+    var score = evalData.score || 85;
+    document.getElementById('resultScore').textContent = score + '分';
+    document.getElementById('resultTime').textContent = elapsed + 's';
+
+    var trendName = selectedTrend ? selectedTrend.name : '自定义';
+    var roomName = {modern:'现代客厅',bedroom:'温馨卧室',chinese:'中式雅居',nordic:'北欧风格'}[selectedRoom];
+    var texName = {chinese_ink:'水墨江南',nordic_minimal:'北欧极简',japanese_wabi:'侘寂之美',french_roma:'法式浪漫',modern_abstract:'现代艺术',luxury_velvet:'奢华丝绒'}[selectedTextile];
+
+    // 显示预览图
+    var previewImgHtml = previewData.filename
+      ? '<img src="/spatial/outputs/' + previewData.filename + '" style="max-width:100%;border-radius:12px;margin-bottom:20px;box-shadow:0 8px 40px rgba(44,36,20,.12)">'
+      : '';
+
+    document.getElementById('summaryGrid').innerHTML = previewImgHtml + `
+      <div class="summary-item"><div class="s-label">风格趋势</div><div class="s-value">${trendName}</div></div>
+      <div class="summary-item"><div class="s-label">空间类型</div><div class="s-value">${roomName}</div></div>
+      <div class="summary-item"><div class="s-label">面料风格</div><div class="s-value">${texName}</div></div>
+      <div class="summary-item"><div class="s-label">搭配评分</div><div class="s-value">${score}分${evalData.level==='excellent'?' — 高度协调':evalData.level==='good'?' — 协调良好':' — 建议调整'}</div></div>
+    `;
+
+    document.getElementById('btn3').disabled = false;
+    goStep(4);
+  } catch(e) {
+    hideLoading();
+    alert('生成失败: ' + e.message + '\n\n请确认空间感知引擎(port:5001)已启动。');
+  }
+}
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || 'AI正在生成...';
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading').classList.remove('show');
+}
+
+function resetAll() {
+  selectedTrend = null;
+  selectedRoom = 'modern';
+  selectedTextile = 'chinese_ink';
+  currentDNA = {};
+  DIMS.forEach(d => currentDNA[d.key] = 50);
+  document.querySelectorAll('.trend-opt').forEach(e=>e.classList.remove('selected'));
+  document.querySelectorAll('.room-opt').forEach((e,i)=>{e.classList.toggle('selected',i===0)});
+  document.querySelectorAll('.textile-opt').forEach((e,i)=>{e.classList.toggle('selected',i===0)});
+  document.getElementById('patternPreview').classList.remove('show');
+  document.getElementById('btn1').disabled = true;
+  document.getElementById('btn2').disabled = true;
+  document.getElementById('btn3').disabled = true;
+  init();
+  goStep(1);
+}
+
+init();
+</script>
+</body>
+</html>

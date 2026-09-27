@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>织物基因编辑器 | TextileGeneEditor</title>
+<style>
+:root{
+  --bg:#06060a;--bg2:#0a0a12;--bg3:#10101c;--bg4:#161628;
+  --border:#1a1a2e;--border-l:#252540;
+  --text:#e8e6e1;--text2:#a09b92;--text3:#6b6660;
+  --accent:#c9a96e;--accent2:#8b6914;--accent-g:rgba(201,169,110,0.12);
+  --gene:#00e5a0;--gene2:#00b377;--gene-g:rgba(0,229,160,0.12);
+  --purple:#a78bfa;--blue:#60a5fa;--red:#f87171;--orange:#fb923c;--cyan:#22d3ee;
+  --r:14px;--rs:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'SF Pro Display','PingFang SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* Background — multi-layer parallax */
+.bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+}
+.bg-layer{
+  position:absolute;inset:-20px;background-size:cover;background-position:center;will-change:transform;
+}
+.bg-lab{
+  background-image:url('/assets/bg-gene-lab.png');
+  opacity:.35;
+  animation:bgFloat 30s ease-in-out infinite;
+}
+.bg-dna{
+  background-image:url('/assets/bg-gene-dna-strands.png');
+  opacity:.18;
+  animation:bgFloat2 40s ease-in-out infinite reverse;
+}
+.bg::after{
+  content:'';position:absolute;inset:0;z-index:2;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0,229,160,.06), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(201,169,110,.05), transparent 60%),
+    linear-gradient(180deg,rgba(6,6,10,.75) 0%,rgba(6,6,10,.5) 40%,rgba(6,6,10,.65) 70%,rgba(6,6,10,.85) 100%);
+}
+@keyframes bgFloat{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(15px,-10px) scale(1.02)}50%{transform:translate(-10px,15px) scale(1.01)}75%{transform:translate(10px,5px) scale(1.03)}}
+@keyframes bgFloat2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-20px,15px) scale(1.03)}66%{transform:translate(15px,-20px) scale(1.02)}}
+
+/* Animated orbs */
+.bg .orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.05;z-index:1}
+.bg .a{width:600px;height:600px;top:-150px;left:-100px;background:var(--gene);animation:orbA 20s ease-in-out infinite}
+.bg .b{width:500px;height:500px;bottom:-100px;right:-100px;background:var(--accent);animation:orbB 25s ease-in-out infinite}
+.bg .c{width:350px;height:350px;top:50%;left:60%;background:var(--purple);animation:orbC 22s ease-in-out infinite}
+.bg .d{width:300px;height:300px;top:20%;right:20%;background:var(--cyan);animation:orbD 28s ease-in-out infinite;opacity:.03}
+@keyframes orbA{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(100px,80px) scale(1.15)}66%{transform:translate(-40px,120px) scale(.9)}}
+@keyframes orbB{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-80px,-60px) scale(1.1)}66%{transform:translate(60px,-100px) scale(.95)}}
+@keyframes orbC{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-50px,60px) scale(1.2)}}
+@keyframes orbD{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(70px,-50px) scale(1.15)}}
+
+/* Grid lines overlay with scan animation */
+.grid-overlay{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,229,160,.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,160,.012) 1px, transparent 1px);
+  background-size:60px 60px;
+}
+.grid-overlay::after{
+  content:'';position:absolute;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(0,229,160,.15),transparent);
+  animation:gridScan 8s linear infinite;
+}
+@keyframes gridScan{0%{top:-2px}100%{top:100%}}
+
+/* Floating particle canvas */
+#particles-canvas{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.6}
+
+.app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:24px 28px}
+
+/* Header */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid rgba(201,169,110,.1)}
+.header .brand{display:flex;align-items:center;gap:14px}
+.header .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--gene),var(--accent));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--bg);letter-spacing:-1px;box-shadow:0 4px 16px rgba(0,229,160,.2)}
+.header h1{font-size:18px;font-weight:700;letter-spacing:.06em}
+.header .sub{font-size:12px;color:var(--text2);margin-top:3px;letter-spacing:.02em}
+.header-right{display:flex;align-items:center;gap:16px}
+.header-right .status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.header-right .pulse{width:7px;height:7px;border-radius:50%;background:var(--gene);box-shadow:0 0 8px var(--gene);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Nav links */
+.nav{display:flex;gap:6px;margin-bottom:28px}
+.nav-item{padding:10px 20px;border-radius:var(--rs);font-size:12px;color:var(--text3);cursor:pointer;transition:all .25s;letter-spacing:.5px;border:1px solid transparent;font-weight:500}
+.nav-item:hover{color:var(--text);background:rgba(201,169,110,.06);border-color:rgba(201,169,110,.08)}
+.nav-item.on{color:var(--gene);background:var(--gene-g);border-color:rgba(0,229,160,.15)}
+
+/* Section */
+.section{display:none}.section.on{display:block}
+
+/* Lab layout - 2 columns: canvas left, controls right */
+.lab{display:grid;grid-template-columns:1fr 340px;gap:24px;min-height:calc(100vh - 200px)}
+.right-col{max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
+@media(max-width:1100px){.lab{grid-template-columns:1fr;}.right-col{max-height:none;overflow:visible}}
+@media(min-width:1400px){.lab{grid-template-columns:1fr 380px}}
+
+/* Panel */
+.panel{background:rgba(10,10,18,.85);backdrop-filter:blur(8px);border:1px solid rgba(201,169,110,.08);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.panel-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(201,169,110,.06)}
+.panel-hd h3{font-size:13px;font-weight:600;letter-spacing:.5px;color:var(--text)}
+.panel-hd .tag{font-size:9px;padding:2px 8px;border-radius:20px;background:var(--gene-g);color:var(--gene);letter-spacing:.5px;font-weight:600}
+
+/* DNA Sliders */
+.gene-row{margin-bottom:12px;padding:6px 0}
+.gene-row+.gene-row{border-top:1px solid rgba(201,169,110,.04)}
+.gene-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.gene-name{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;font-weight:500}
+.gene-name .ico{font-size:14px}
+.gene-val{font-size:13px;font-weight:700;color:var(--gene);font-variant-numeric:tabular-nums;width:32px;text-align:right}
+.gene-bar{position:relative;height:6px;background:rgba(0,229,160,.06);border-radius:3px;overflow:hidden}
+.gene-fill{height:100%;border-radius:3px;transition:width .3s;background:linear-gradient(90deg,var(--gene2),var(--gene))}
+.gene-endpoints{display:flex;justify-content:space-between;margin-top:4px}
+.gene-endpoints span{font-size:9px;color:var(--text3)}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;background:transparent;position:absolute;top:0;left:0;z-index:2;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gene);border:2px solid var(--bg);cursor:pointer;box-shadow:0 0 8px rgba(0,229,160,.4)}
+
+/* Canvas */
+.canvas-area{display:flex;flex-direction:column;gap:16px}
+.canvas{
+  background:rgba(16,16,28,.6);backdrop-filter:blur(4px);
+  border:1px solid rgba(201,169,110,.08);border-radius:var(--r);
+  min-height:520px;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.canvas::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,229,160,.02),transparent,rgba(201,169,110,.02));
+  pointer-events:none;
+}
+.canvas img{max-width:100%;max-height:100%;border-radius:var(--r)}
+.canvas .placeholder{text-align:center;color:var(--text3)}
+.canvas .placeholder .big{font-size:56px;margin-bottom:16px;opacity:.25;filter:grayscale(.3)}
+.canvas .placeholder p{font-size:14px;line-height:2;color:var(--text3)}
+
+/* Generate button */
+.gen-btn{
+  width:100%;padding:14px;
+  border:1px solid rgba(0,229,160,.3);border-radius:var(--rs);
+  background:linear-gradient(135deg,rgba(0,229,160,.12),rgba(0,229,160,.04));
+  color:var(--gene);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .3s;letter-spacing:1px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.gen-btn:hover{
+  background:linear-gradient(135deg,rgba(0,229,160,.22),rgba(0,229,160,.08));
+  box-shadow:0 0 32px rgba(0,229,160,.15),0 4px 16px rgba(0,0,0,.2);
+  transform:translateY(-2px);border-color:rgba(0,229,160,.5);
+}
+.gen-btn:active{transform:translateY(0)}
+.gen-btn.loading{opacity:.6;pointer-events:none}
+.gen-btn .spinner{width:16px;height:16px;border:2px solid transparent;border-top-color:var(--gene);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Action buttons */
+.actions{display:flex;gap:8px;margin-top:16px}
+.act-btn{flex:1;padding:11px;border:1px solid rgba(201,169,110,.1);border-radius:var(--rs);background:rgba(201,169,110,.04);color:var(--text2);font-size:11px;cursor:pointer;transition:all .25s;text-align:center;letter-spacing:.3px;font-weight:500}
+.act-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-g)}
+.act-btn.primary{border-color:var(--accent);color:var(--accent);background:var(--accent-g)}
+
+/* Preset cards */
+.preset-grid{display:flex;flex-direction:column;gap:8px}
+.preset-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--rs);border:1px solid rgba(201,169,110,.06);cursor:pointer;transition:all .25s;background:rgba(201,169,110,.03)}
+.preset-card:hover{border-color:var(--gene);transform:translateX(4px);background:rgba(0,229,160,.04)}
+.preset-card .color-dot{width:24px;height:24px;border-radius:6px;flex-shrink:0}
+.preset-card .info{flex:1;min-width:0}
+.preset-card .name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preset-card .desc{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preset-card .momentum{font-size:11px;font-weight:700;color:var(--gene);flex-shrink:0}
+
+/* Trend seed */
+.seed-tag{display:inline-flex;align-items:center;gap:4px;font-size:9px;padding:2px 8px;border-radius:20px;background:var(--accent-g);color:var(--accent);margin-top:4px}
+
+/* Prompt preview */
+.prompt-box{background:rgba(6,6,10,.6);border:1px solid rgba(201,169,110,.06);border-radius:var(--rs);padding:14px;font-size:11px;color:var(--text3);line-height:1.8;max-height:140px;overflow-y:auto;font-family:'SF Mono',monospace;word-break:break-all}
+
+/* History */
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{display:flex;gap:12px;padding:10px;border-radius:var(--rs);border:1px solid rgba(201,169,110,.06);cursor:pointer;transition:all .25s;background:rgba(201,169,110,.02)}
+.history-item:hover{border-color:var(--gene);background:rgba(0,229,160,.03)}
+.history-item img{width:48px;height:48px;border-radius:6px;object-fit:cover}
+.history-item .hi-info{flex:1;min-width:0}
+.history-item .hi-time{font-size:10px;color:var(--text3)}
+.history-item .hi-preset{font-size:11px;font-weight:600;margin-top:2px}
+.history-item .hi-dna{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
+.history-item .hi-dna span{font-size:8px;padding:1px 4px;border-radius:3px;background:var(--bg);color:var(--text3)}
+
+/* Breeding modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border-l);border-radius:var(--r);padding:24px;width:500px;max-width:90vw;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px;color:var(--gene)}
+.modal .close{position:absolute;top:12px;right:16px;font-size:20px;color:var(--text3);cursor:pointer}
+.breed-parents{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.breed-parent{padding:12px;border:1px solid var(--border);border-radius:var(--rs);background:var(--bg3)}
+.breed-parent h4{font-size:12px;color:var(--accent);margin-bottom:8px}
+.breed-child{padding:12px;border:1px solid var(--gene);border-radius:var(--rs);background:var(--gene-g)}
+
+/* ===== Perler Beads (拼豆图纸) ===== */
+.beads-layout{display:grid;grid-template-columns:1fr 320px;gap:24px;min-height:calc(100vh - 200px)}
+@media(max-width:1100px){.beads-layout{grid-template-columns:1fr}}
+.bead-canvas-wrap{
+  background:rgba(16,16,28,.6);backdrop-filter:blur(4px);
+  border:1px solid rgba(201,169,110,.08);border-radius:var(--r);
+  padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px;
+  overflow:auto;min-height:520px;
+  position:relative;
+}
+.bead-canvas-wrap::before{
+  content:'';position:absolute;inset:0;border-radius:var(--r);
+  background:url('/assets/bg-gene-beads-v2.png') center/cover no-repeat;
+  opacity:.12;pointer-events:none;z-index:0;
+}
+.bead-canvas-wrap>*{position:relative;z-index:1}
+.bead-canvas-wrap canvas{
+  image-rendering:pixelated;cursor:crosshair;
+  border:2px solid rgba(201,169,110,.12);border-radius:6px;
+}
+.bead-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+.bead-tools select,.bead-tools button{
+  padding:8px 14px;border-radius:var(--rs);font-size:11px;
+  border:1px solid rgba(201,169,110,.12);background:rgba(201,169,110,.04);
+  color:var(--text2);cursor:pointer;transition:all .25s;font-weight:500;
+}
+.bead-tools button:hover{border-color:var(--gene);color:var(--gene);background:var(--gene-g)}
+.bead-tools button.primary{border-color:var(--gene);color:var(--gene);background:var(--gene-g)}
+.bead-tools label{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;cursor:pointer}
+.bead-tools input[type=checkbox]{accent-color:var(--gene)}
+.bead-info{display:flex;gap:16px;font-size:11px;color:var(--text3);justify-content:center;flex-wrap:wrap}
+.bead-info span{display:flex;align-items:center;gap:4px}
+.bead-info .dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+/* Color palette panel */
+.palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
+.pal-swatch{
+  aspect-ratio:1;border-radius:4px;border:1px solid rgba(201,169,110,.06);
+  display:flex;align-items:center;justify-content:center;font-size:8px;
+  font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);
+  cursor:pointer;transition:all .2s;position:relative;
+}
+.pal-swatch:hover{transform:scale(1.15);z-index:2;border-color:var(--gene);box-shadow:0 0 8px rgba(0,229,160,.3)}
+.pal-swatch.active{border:2px solid var(--gene);box-shadow:0 0 12px rgba(0,229,160,.4)}
+.pal-swatch .count{
+  position:absolute;bottom:-2px;right:-2px;font-size:7px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:3px;
+  padding:0 3px;color:var(--gene);min-width:14px;text-align:center;
+  text-shadow:none;
+}
+
+/* Bead detail panel */
+.bead-detail{display:flex;flex-direction:column;gap:8px}
+.bead-detail .swatch-big{
+  width:48px;height:48px;border-radius:8px;border:2px solid var(--border-l);
+}
+.bead-detail .detail-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
+.bead-detail .detail-row .val{color:var(--text);font-weight:600}
+
+/* Mutation slider */
+.mutate-ctrl{display:flex;align-items:center;gap:12px;margin-top:12px}
+.mutate-ctrl label{font-size:11px;color:var(--text2);flex-shrink:0}
+.mutate-ctrl input[type=range]{position:relative;z-index:2;flex:1;height:4px}
+.mutate-ctrl .val{font-size:11px;color:var(--gene);width:28px;text-align:right}
+
+/* Progress */
+.progress{display:none;margin-top:8px}
+.progress.show{display:block}
+.progress-bar{height:3px;background:var(--bg);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gene),var(--accent));border-radius:2px;animation:prog 15s linear forwards;width:0}
+@keyframes prog{to{width:95%}}
+.progress-text{font-size:10px;color:var(--text3);margin-top:4px}
+
+/* Custom desc */
+.custom-input{width:100%;padding:12px 14px;border:1px solid rgba(201,169,110,.08);border-radius:var(--rs);background:rgba(6,6,10,.5);color:var(--text);font-size:12px;font-family:inherit;resize:none;min-height:50px;margin-top:10px;line-height:1.8}
+.custom-input:focus{outline:none;border-color:var(--gene);box-shadow:0 0 12px rgba(0,229,160,.1)}
+.custom-input::placeholder{color:var(--text3)}
+
+/* Unified nav */
+.unified-nav{
+  position:sticky;top:0;z-index:1000;
+  height:52px;
+  background:rgba(44,36,20,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(245,240,232,.08);
+  display:flex;align-items:center;
+  padding:0 24px;gap:24px;
+  font-size:11px;
+}
+.unified-nav .nav-logo{font-weight:700;color:#f5f0e8;margin-right:auto;font-size:14px;letter-spacing:.1em}
+.unified-nav a{color:rgba(245,240,232,.6);text-decoration:none;transition:color .2s}
+.unified-nav a:hover{color:#f5f0e8}
+.unified-nav a.active{background:rgba(245,240,232,.1);color:#f5f0e8;font-weight:600}
+.app{padding-top:68px}
+
+/* ===== Hover Effects & Visual Polish ===== */
+
+html{scroll-behavior:smooth}
+
+/* Panel entrance animation + hover */
+.panel{
+  opacity:0;
+  transform:translateY(20px);
+  animation:panelIn .6s cubic-bezier(.16,1,.3,1) forwards;
+  transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+.panel:nth-child(1){animation-delay:.05s}
+.panel:nth-child(2){animation-delay:.12s}
+.panel:nth-child(3){animation-delay:.19s}
+.panel:nth-child(4){animation-delay:.26s}
+.panel:nth-child(5){animation-delay:.33s}
+@keyframes panelIn{to{opacity:1;transform:translateY(0)}}
+.panel:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 32px rgba(0,0,0,.3), 0 0 0 1px rgba(0,229,160,.1), 0 0 40px rgba(0,229,160,.04);
+  border-color:rgba(0,229,160,.2);
+}
+
+/* Button transitions */
+.gen-btn{
+  transition:all .3s cubic-bezier(.4,0,.2,1);
+}
+.gen-btn:hover{
+  background:linear-gradient(135deg,rgba(0,229,160,.25),rgba(0,229,160,.1));
+  box-shadow:0 0 28px rgba(0,229,160,.18), 0 4px 12px rgba(0,0,0,.2);
+  transform:translateY(-2px);
+}
+.gen-btn:active{
+  transform:translateY(0);
+  box-shadow:0 0 12px rgba(0,229,160,.1);
+}
+
+.act-btn{
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+.act-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  transform:translateY(-1px);
+  box-shadow:0 2px 8px rgba(201,169,110,.1);
+}
+.act-btn:active{
+  transform:translateY(0);
+}
+
+/* Slider thumb hover */
+input[type=range]::-webkit-slider-thumb{
+  transition:transform .2s ease, box-shadow .2s ease;
+}
+input[type=range]::-webkit-slider-thumb:hover{
+  transform:scale(1.3);
+  box-shadow:0 0 14px rgba(0,229,160,.5);
+}
+input[type=range]:active::-webkit-slider-thumb{
+  transform:scale(1.1);
+  box-shadow:0 0 20px rgba(0,229,160,.6);
+}
+
+/* Gene fill bar glow on row hover */
+.gene-row{
+  transition:background .2s ease;
+  border-radius:6px;
+  padding:4px 6px;
+  margin-left:-6px;
+  margin-right:-6px;
+}
+.gene-row:hover{
+  background:rgba(0,229,160,.03);
+}
+.gene-row:hover .gene-fill{
+  box-shadow:0 0 8px rgba(0,229,160,.3);
+}
+
+/* Preset card polish */
+.preset-card{
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+.preset-card:hover{
+  border-color:var(--gene);
+  transform:translateX(4px);
+  box-shadow:0 2px 12px rgba(0,229,160,.08);
+}
+.preset-card:active{
+  transform:translateX(2px);
+}
+
+/* History item hover */
+.history-item{
+  transition:all .25s ease;
+}
+.history-item:hover{
+  border-color:var(--gene);
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+
+/* Nav item transitions */
+.nav-item{
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+.nav-item:hover{
+  color:var(--text);
+  background:var(--bg3);
+  transform:translateY(-1px);
+}
+.nav-item.on{
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+}
+
+/* Modal overlay transition */
+.modal-overlay{
+  transition:opacity .3s ease;
+  opacity:0;
+  pointer-events:none;
+}
+.modal-overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+.modal{
+  transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+  transform:translateY(12px) scale(.97);
+  opacity:0;
+}
+.modal-overlay.show .modal{
+  transform:translateY(0) scale(1);
+  opacity:1;
+}
+
+/* Canvas glow border animation */
+.canvas{
+  transition:border-color .3s ease, box-shadow .3s ease;
+  position:relative;
+}
+.canvas::after{
+  content:'';position:absolute;inset:-1px;border-radius:var(--r);
+  background:conic-gradient(from 0deg,transparent,rgba(0,229,160,.12),transparent,rgba(201,169,110,.08),transparent);
+  animation:borderRotate 6s linear infinite;
+  pointer-events:none;opacity:0;transition:opacity .3s;
+}
+.canvas:hover::after{opacity:1}
+.canvas:hover{
+  border-color:rgba(0,229,160,.15);
+  box-shadow:0 0 40px rgba(0,0,0,.25), 0 0 80px rgba(0,229,160,.03);
+}
+@keyframes borderRotate{to{transform:rotate(360deg)}}
+
+/* Logo DNA helix rotation */
+.header .logo{
+  animation:logoPulse 4s ease-in-out infinite;
+}
+@keyframes logoPulse{
+  0%,100%{box-shadow:0 4px 16px rgba(0,229,160,.2)}
+  50%{box-shadow:0 4px 24px rgba(0,229,160,.35), 0 0 40px rgba(0,229,160,.1)}
+}
+
+/* Generate button idle pulse */
+.gen-btn::before{
+  content:'';position:absolute;inset:0;border-radius:var(--rs);
+  background:radial-gradient(circle at center,rgba(0,229,160,.1),transparent 70%);
+  opacity:0;transition:opacity .3s;
+  animation:btnIdle 3s ease-in-out infinite;
+}
+@keyframes btnIdle{0%,100%{opacity:0}50%{opacity:1}}
+.gen-btn{position:relative;overflow:hidden}
+
+/* Nav item active underline glow */
+.nav-item.on::after{
+  content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
+  background:var(--gene);border-radius:1px;
+  box-shadow:0 0 8px rgba(0,229,160,.5);
+  animation:navGlow 2s ease-in-out infinite;
+}
+@keyframes navGlow{0%,100%{box-shadow:0 0 4px rgba(0,229,160,.3)}50%{box-shadow:0 0 12px rgba(0,229,160,.6)}}
+.nav-item{position:relative}
+
+/* Header title shimmer */
+.header h1{
+  background:linear-gradient(90deg,var(--text),var(--gene),var(--text));
+  background-size:200% 100%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimmer 6s ease-in-out infinite;
+}
+@keyframes shimmer{0%,100%{background-position:200% 0}50%{background-position:-100% 0}}
+
+/* Status pulse enhanced */
+.header-right .pulse{
+  animation:pulseEnhanced 2s ease-in-out infinite;
+}
+@keyframes pulseEnhanced{
+  0%,100%{opacity:1;box-shadow:0 0 6px var(--gene)}
+  50%{opacity:.3;box-shadow:0 0 16px var(--gene), 0 0 24px rgba(0,229,160,.3)}
+}
+
+/* Custom input focus glow */
+.custom-input{
+  transition:border-color .3s ease, box-shadow .3s ease;
+}
+.custom-input:focus{
+  border-color:var(--gene);
+  box-shadow:0 0 0 3px rgba(0,229,160,.08);
+}
+
+/* Prompt box subtle hover */
+.prompt-box{
+  transition:border-color .3s ease;
+}
+.prompt-box:hover{
+  border-color:var(--border-l);
+}
+
+/* Color dot scale on card hover */
+.preset-card:hover .color-dot{
+  transform:scale(1.1);
+  transition:transform .25s ease;
+}
+
+/* Breeding parent cards */
+.breed-parent{
+  transition:border-color .3s ease, transform .3s ease;
+}
+.breed-parent:hover{
+  border-color:var(--border-l);
+  transform:translateY(-1px);
+}
+
+/* Unified nav link underline effect */
+.unified-nav a{
+  position:relative;
+  padding-bottom:2px;
+}
+.unified-nav a::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:0;
+  width:0;height:1px;
+  background:var(--gene);
+  transition:width .3s ease;
+}
+.unified-nav a:hover::after{
+  width:100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border-l);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+</style>
+</head>
+<body>
+
+<!-- Unified Nav -->
+<nav class="unified-nav">
+  <span class="nav-logo">织觉引擎 WeaveMind</span>
+  <a href="/" target="_blank">首页</a>
+  <a href="/translator" target="_blank">审美翻译</a>
+  <a href="/spatial" target="_blank">空间感知</a>
+  <a href="/trend" target="_blank">趋势先知</a>
+  <a href="/gene" class="active">基因编辑</a>
+  <a href="/c2m.html" target="_blank">C2M体验</a>
+</nav>
+
+<div class="bg">
+  <div class="bg-layer bg-lab"></div>
+  <div class="bg-layer bg-dna"></div>
+  <div class="orb a"></div>
+  <div class="orb b"></div>
+  <div class="orb c"></div>
+  <div class="orb d"></div>
+</div>
+<div class="grid-overlay"></div>
+<canvas id="particles-canvas"></canvas>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="logo">GE</div>
+      <div>
+        <h1>基因编辑器</h1>
+        <div class="sub">趋势驱动的AI花型生成引擎 &middot; 织觉引擎</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status"><div class="pulse"></div><span id="status-text">引擎就绪</span></div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav">
+    <div class="nav-item on" data-s="lab">基因编辑实验室</div>
+    <div class="nav-item" data-s="beads">拼豆图纸</div>
+    <div class="nav-item" data-s="history">生成历史</div>
+  </div>
+
+  <!-- Section: Lab -->
+  <div class="section on" id="sec-lab">
+    <div class="lab">
+      <!-- Left: Canvas + Generate -->
+      <div class="canvas-area">
+        <div class="canvas" id="canvas">
+          <div class="placeholder">
+            <div class="big" style="font-size:48px;font-weight:200;color:rgba(201,169,110,.15);font-family:'Noto Serif SC',Georgia,serif">DNA</div>
+            <p>选择趋势种子或编辑基因后</p>
+            <p>点击生成织物设计</p>
+          </div>
+        </div>
+        <div class="progress" id="progress">
+          <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+          <div class="progress-text" id="prog-text">AI正在编织基因序列...</div>
+        </div>
+        <button class="gen-btn" id="btn-generate">
+          <span>GENERATE</span>
+          <span style="font-size:11px;opacity:.7">生成织物设计</span>
+        </button>
+
+        <!-- Prompt preview below canvas -->
+        <div class="panel" style="margin-top:8px">
+          <div class="panel-hd"><h3>Prompt预览</h3><div class="tag">实时</div></div>
+          <div class="prompt-box" id="prompt-preview">选择一个趋势种子开始...</div>
+        </div>
+      </div>
+
+      <!-- Right: All Controls -->
+      <div class="right-col">
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>DNA趋势种子</h3>
+            <div class="tag">来自趋势先知</div>
+          </div>
+          <div class="preset-grid" id="presets"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>基因编辑面板</h3>
+            <div class="tag">8维调控</div>
+          </div>
+          <div id="gene-sliders"></div>
+          <div class="mutate-ctrl">
+            <label>变异强度</label>
+            <input type="range" id="mutate-intensity" min="5" max="50" value="20">
+            <span class="val" id="mutate-val">20</span>
+          </div>
+          <div class="actions">
+            <div class="act-btn" id="btn-mutate">变异</div>
+            <div class="act-btn" id="btn-reset">重置</div>
+            <div class="act-btn primary" id="btn-breed">交叉</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>自定义描述</h3></div>
+          <textarea class="custom-input" id="custom-desc" placeholder="输入额外的设计要求，例如：加入金属光泽线、搭配渐变效果..."></textarea>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>快速历史</h3></div>
+          <div class="history-list" id="mini-history"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Beads (拼豆图纸) -->
+  <div class="section" id="sec-beads">
+    <div class="beads-layout">
+      <!-- Left: Bead Canvas -->
+      <div class="bead-canvas-wrap">
+        <div class="bead-tools">
+          <div class="preset-card" id="bead-preset-label" style="padding:6px 10px;cursor:default;pointer-events:none">
+            <div class="color-dot" style="background:#1a3a6a"></div>
+            <div class="info"><div class="name">蓝印花布 · 默认图案</div><div class="desc">Blue Calico · Indigo Resist</div></div>
+          </div>
+          <select id="bead-grid-size">
+            <option value="29">29×29 小幅</option>
+            <option value="38" selected>38×38 标准</option>
+            <option value="58">58×58 大幅</option>
+          </select>
+          <label><input type="checkbox" id="bead-show-num" checked> 色号</label>
+          <label><input type="checkbox" id="bead-show-grid" checked> 网格</label>
+          <button id="btn-bead-from-gen" title="将当前生成的设计转为拼豆图">← 从设计导入</button>
+          <button id="btn-bead-export" class="primary">导出图片</button>
+        </div>
+        <canvas id="bead-canvas" width="760" height="760"></canvas>
+        <div class="bead-info">
+          <span>总颗数: <b id="bead-total">0</b></span>
+          <span>颜色数: <b id="bead-colors">0</b></span>
+          <span>尺寸: <b id="bead-dim">38×38</b></span>
+        </div>
+      </div>
+
+      <!-- Right: Palette + Detail -->
+      <div class="right-col">
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>拼豆色盘</h3>
+            <div class="tag">Perler Palette</div>
+          </div>
+          <div class="palette-grid" id="bead-palette"></div>
+        </div>
+        <div class="panel" id="bead-detail-panel" style="display:none">
+          <div class="panel-hd"><h3>颜色详情</h3></div>
+          <div class="bead-detail" id="bead-detail"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hd"><h3>用色统计</h3></div>
+          <div id="bead-stats" style="font-size:11px;color:var(--text3)">选择图案后显示...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: History -->
+  <div class="section" id="sec-history">
+    <div class="panel">
+      <div class="panel-hd"><h3>生成历史</h3><div class="tag" id="hist-count">0 件作品</div></div>
+      <div class="history-list" id="full-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Breeding Modal -->
+<div class="modal-overlay" id="breed-modal">
+  <div class="modal" style="position:relative">
+    <div class="close" id="modal-close">&times;</div>
+    <h3>基因交叉繁殖</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px">将当前基因与另一个预设交叉，产生新品种</p>
+    <div class="breed-parents">
+      <div class="breed-parent">
+        <h4>亲本A (当前)</h4>
+        <div id="breed-a-info" style="font-size:11px;color:var(--text3)">当前编辑器基因</div>
+      </div>
+      <div class="breed-parent">
+        <h4>亲本B (选择)</h4>
+        <div id="breed-b-select"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="act-btn primary" id="btn-do-breed" style="flex:1">执行交叉</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API='/gene';
+var DIMS={},PRESETS={},TSEEDS=[];
+var currentDNA={};
+var breedTarget='';
+
+// ===== Init =====
+window.addEventListener('DOMContentLoaded',function(){
+  loadAll();
+  setupNav();
+  setupActions();
+  loadHistory();
+});
+
+function loadAll(){
+  Promise.all([
+    fetch(API+'/api/genome').then(function(r){return r.json()}),
+    fetch(API+'/api/presets').then(function(r){return r.json()}),
+    fetch(API+'/api/trend_seeds').then(function(r){return r.json()})
+  ]).then(function(a){
+    DIMS=a[0].dimensions||{};
+    PRESETS=a[1].presets||{};
+    TSEEDS=a[2].seeds||[];
+    renderPresets();
+    renderSliders();
+    renderBreedSelect();
+  }).catch(function(e){console.error('Load failed:',e)});
+}
+
+function setupNav(){
+  var items=document.querySelectorAll('.nav-item');
+  for(var i=0;i<items.length;i++){
+    items[i].addEventListener('click',function(){
+      for(var j=0;j<items.length;j++) items[j].classList.remove('on');
+      this.classList.add('on');
+      var secs=document.querySelectorAll('.section');
+      for(var j=0;j<secs.length;j++) secs[j].classList.remove('on');
+      document.getElementById('sec-'+this.getAttribute('data-s')).classList.add('on');
+      if(this.getAttribute('data-s')==='history') loadFullHistory();
+    });
+  }
+}
+
+// ===== Presets =====
+function renderPresets(){
+  var el=document.getElementById('presets'),h='';
+  for(var pid in PRESETS){
+    var p=PRESETS[pid];
+    var seed=null;
+    for(var i=0;i<TSEEDS.length;i++){if(TSEEDS[i].gene===pid){seed=TSEEDS[i];break;}}
+    var mom=seed?seed.momentum:0;
+    h+='<div class="preset-card" data-pid="'+pid+'">';
+    h+='<div class="color-dot" style="background:'+p.color+'"></div>';
+    h+='<div class="info"><div class="name">'+p.name+'</div><div class="desc">'+p.desc+'</div>';
+    if(seed) h+='<div class="seed-tag">趋势动能 '+mom+'</div>';
+    h+='</div>';
+    if(seed) h+='<div class="momentum">'+mom+'</div>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+  var cards=el.querySelectorAll('.preset-card');
+  for(var i=0;i<cards.length;i++){
+    cards[i].addEventListener('click',function(){
+      var pid=this.getAttribute('data-pid');
+      var p=PRESETS[pid];
+      currentDNA=JSON.parse(JSON.stringify(p.dna));
+      renderSliders();
+      updatePrompt();
+      highlightPreset(pid);
+    });
+  }
+}
+
+function highlightPreset(pid){
+  var cards=document.querySelectorAll('.preset-card');
+  for(var i=0;i<cards.length;i++){
+    cards[i].style.borderColor=cards[i].getAttribute('data-pid')===pid?'var(--gene)':'';
+  }
+}
+
+// ===== Gene Sliders =====
+function renderSliders(){
+  var el=document.getElementById('gene-sliders'),h='';
+  for(var key in DIMS){
+    var d=DIMS[key];
+    var val=currentDNA[key]!==undefined?currentDNA[key]:50;
+    var lbl=val<35?d.labels[0]:val>65?d.labels[1]:'中';
+    h+='<div class="gene-row" data-key="'+key+'">';
+    h+='<div class="gene-label"><span class="gene-name"><span class="ico">'+d.icon+'</span> '+d.name+'</span><span class="gene-val" id="gv-'+key+'">'+val+'</span></div>';
+    h+='<div class="gene-bar"><div class="gene-fill" id="gf-'+key+'" style="width:'+val+'%"></div><input type="range" min="'+d.min+'" max="'+d.max+'" value="'+val+'" data-key="'+key+'"></div>';
+    h+='<div class="gene-endpoints"><span>'+d.labels[0]+'</span><span>'+d.labels[1]+'</span></div>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+
+  // Bind sliders
+  var ranges=el.querySelectorAll('input[type=range]');
+  for(var i=0;i<ranges.length;i++){
+    ranges[i].addEventListener('input',function(){
+      var key=this.getAttribute('data-key');
+      var val=parseInt(this.value);
+      currentDNA[key]=val;
+      document.getElementById('gv-'+key).textContent=val;
+      document.getElementById('gf-'+key).style.width=val+'%';
+      updatePrompt();
+    });
+  }
+}
+
+function updateDNA(dna){
+  currentDNA=JSON.parse(JSON.stringify(dna));
+  for(var key in currentDNA){
+    var el=document.getElementById('gv-'+key);
+    if(el){
+      el.textContent=currentDNA[key];
+      document.getElementById('gf-'+key).style.width=currentDNA[key]+'%';
+      var range=document.querySelector('input[data-key="'+key+'"]');
+      if(range)range.value=currentDNA[key];
+    }
+  }
+  updatePrompt();
+}
+
+// ===== Prompt =====
+function updatePrompt(){
+  var parts=['high quality textile curtain fabric design, close-up detail shot'];
+  var d=currentDNA;
+  if(d.color_warmth>65)parts.push('warm color palette, golden amber tones');
+  else if(d.color_warmth<35)parts.push('cool color palette, blue grey tones');
+  if(d.saturation>75)parts.push('vibrant high saturation colors');
+  else if(d.saturation<25)parts.push('muted desaturated neutral tones');
+  if(d.pattern_complex>75)parts.push('intricate complex pattern, ornate');
+  else if(d.pattern_complex<25)parts.push('solid color, minimal pattern');
+  if(d.texture_feel>70)parts.push('rough handwoven texture');
+  else if(d.texture_feel<30)parts.push('smooth silk-like surface');
+  if(d.style_modern>70)parts.push('contemporary modern design');
+  else if(d.style_modern<30)parts.push('traditional classic design');
+  if(d.material_weight>70)parts.push('heavy thick fabric, velvet');
+  else if(d.material_weight<30)parts.push('sheer lightweight, translucent');
+  if(d.luminosity>70)parts.push('glossy satin finish');
+  else if(d.luminosity<30)parts.push('matte finish');
+  if(d.organic_ratio>70)parts.push('natural organic fibers');
+  else if(d.organic_ratio<30)parts.push('synthetic modern material');
+  parts.push('professional product photography, studio lighting, 8k');
+  document.getElementById('prompt-preview').textContent=parts.join(', ');
+}
+
+// ===== Generate =====
+function setupActions(){
+  document.getElementById('btn-generate').addEventListener('click',doGenerate);
+  document.getElementById('btn-mutate').addEventListener('click',doMutate);
+  document.getElementById('btn-reset').addEventListener('click',doReset);
+  document.getElementById('btn-breed').addEventListener('click',function(){document.getElementById('breed-modal').classList.add('show')});
+  document.getElementById('modal-close').addEventListener('click',function(){document.getElementById('breed-modal').classList.remove('show')});
+  document.getElementById('btn-do-breed').addEventListener('click',doBreed);
+  document.getElementById('mutate-intensity').addEventListener('input',function(){document.getElementById('mutate-val').textContent=this.value});
+}
+
+function doGenerate(){
+  var btn=document.getElementById('btn-generate');
+  var prog=document.getElementById('progress');
+  btn.classList.add('loading');
+  btn.innerHTML='<div class="spinner"></div><span>生成中...</span>';
+  prog.classList.add('show');
+  document.getElementById('prog-fill').style.width='0';
+  document.getElementById('prog-text').textContent='AI正在编织基因序列...';
+  document.getElementById('status-text').textContent='生成中...';
+
+  var body={dna:currentDNA,custom_desc:document.getElementById('custom-desc').value};
+  // Find matching preset
+  for(var pid in PRESETS){
+    if(JSON.stringify(PRESETS[pid].dna)===JSON.stringify(currentDNA)){body.preset_id=pid;break;}
+  }
+
+  fetch(API+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    btn.classList.remove('loading');
+    btn.innerHTML='<span>GENERATE</span><span style="font-size:11px;opacity:.7">生成织物设计</span>';
+    prog.classList.remove('show');
+    document.getElementById('status-text').textContent='引擎就绪';
+    if(d.success){
+      var canvas=document.getElementById('canvas');
+      canvas.innerHTML='<img src="'+d.image_url+'" alt="generated" style="max-width:100%;max-height:500px;border-radius:var(--r)">';
+      loadHistory();
+    }else{
+      alert('生成失败: '+d.error);
+    }
+  })
+  .catch(function(e){
+    btn.classList.remove('loading');
+    btn.innerHTML='<span>GENERATE</span><span style="font-size:11px;opacity:.7">生成织物设计</span>';
+    prog.classList.remove('show');
+    document.getElementById('status-text').textContent='引擎就绪';
+    alert('请求失败: '+e.message);
+  });
+}
+
+function doMutate(){
+  var intensity=parseInt(document.getElementById('mutate-intensity').value);
+  fetch(API+'/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dna:currentDNA,intensity:intensity})})
+  .then(function(r){return r.json()})
+  .then(function(d){if(d.dna)updateDNA(d.dna)});
+}
+
+function doReset(){
+  currentDNA={};
+  for(var k in DIMS)currentDNA[k]=50;
+  updateDNA(currentDNA);
+  document.querySelectorAll('.preset-card').forEach(function(c){c.style.borderColor=''});
+}
+
+function doBreed(){
+  if(!breedTarget||!PRESETS[breedTarget])return;
+  fetch(API+'/api/breed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parent_a:currentDNA,parent_b:PRESETS[breedTarget].dna,ratio:0.5})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.dna){updateDNA(d.dna);document.getElementById('breed-modal').classList.remove('show');}
+  });
+}
+
+// ===== Breed Select =====
+function renderBreedSelect(){
+  var el=document.getElementById('breed-b-select'),h='';
+  for(var pid in PRESETS){
+    h+='<div class="preset-card" data-bpid="'+pid+'" style="padding:8px;margin-bottom:4px">';
+    h+='<div class="color-dot" style="width:18px;height:18px;border-radius:4px;background:'+PRESETS[pid].color+'"></div>';
+    h+='<div class="info"><div class="name" style="font-size:11px">'+PRESETS[pid].name+'</div></div>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+  var cards=el.querySelectorAll('.preset-card');
+  for(var i=0;i<cards.length;i++){
+    cards[i].addEventListener('click',function(){
+      for(var j=0;j<cards.length;j++) cards[j].style.borderColor='';
+      this.style.borderColor='var(--accent)';
+      breedTarget=this.getAttribute('data-bpid');
+    });
+  }
+}
+
+// ===== History =====
+function loadHistory(){
+  fetch(API+'/api/history').then(function(r){return r.json()}).then(function(d){
+    var list=d.history||[];
+    var el=document.getElementById('mini-history'),h='';
+    for(var i=0;i<list.length&&i<5;i++){
+      h+='<div class="history-item"><img src="'+list[i].img_url+'" alt=""><div class="hi-info"><div class="hi-preset">'+(list[i].preset_id||'自定义')+'</div><div class="hi-time">'+(list[i].created_at||'').slice(0,16)+'</div></div></div>';
+    }
+    el.innerHTML=h||'<p style="font-size:11px;color:var(--text3)">暂无历史</p>';
+  });
+}
+
+function loadFullHistory(){
+  fetch(API+'/api/history').then(function(r){return r.json()}).then(function(d){
+    var list=d.history||[];
+    document.getElementById('hist-count').textContent=list.length+' 件作品';
+    var el=document.getElementById('full-history'),h='';
+    for(var i=0;i<list.length;i++){
+      h+='<div class="history-item"><img src="'+list[i].img_url+'" alt="" style="width:80px;height:80px"><div class="hi-info"><div class="hi-preset">'+(list[i].preset_id||'自定义')+'</div><div class="hi-time">'+(list[i].created_at||'').slice(0,16)+'</div><div class="hi-dna">';
+      var dna=list[i].dna||{};
+      for(var k in dna)h+='<span>'+k+':'+dna[k]+'</span>';
+      h+='</div></div></div>';
+    }
+    el.innerHTML=h||'<p style="font-size:12px;color:var(--text3)">暂无生成历史</p>';
+  });
+}
+
+// ===== Perler Beads (拼豆图纸) =====
+var BEAD_PALETTE=[
+  {id:'H01',name:'白色',hex:'#FFFFFF',brand:'Perler'},
+  {id:'H02',name:'奶油白',hex:'#F5F0E1',brand:'Perler'},
+  {id:'H03',name:'黄色',hex:'#FFD700',brand:'Perler'},
+  {id:'H04',name:'橙色',hex:'#FF8C00',brand:'Perler'},
+  {id:'H05',name:'红色',hex:'#E03030',brand:'Perler'},
+  {id:'H06',name:'深红',hex:'#8B0000',brand:'Perler'},
+  {id:'H07',name:'粉红',hex:'#FF69B4',brand:'Perler'},
+  {id:'H08',name:'浅蓝',hex:'#6CB4EE',brand:'Perler'},
+  {id:'H09',name:'蓝色',hex:'#2060C0',brand:'Perler'},
+  {id:'H10',name:'靛蓝',hex:'#1A3A6A',brand:'Perler'},
+  {id:'H11',name:'深蓝',hex:'#0A1A3A',brand:'Perler'},
+  {id:'H12',name:'浅绿',hex:'#90EE90',brand:'Perler'},
+  {id:'H13',name:'绿色',hex:'#228B22',brand:'Perler'},
+  {id:'H14',name:'深绿',hex:'#004D00',brand:'Perler'},
+  {id:'H15',name:'紫色',hex:'#8A2BE2',brand:'Perler'},
+  {id:'H16',name:'浅紫',hex:'#C8A2E8',brand:'Perler'},
+  {id:'H17',name:'棕色',hex:'#8B4513',brand:'Perler'},
+  {id:'H18',name:'浅棕',hex:'#C4A265',brand:'Perler'},
+  {id:'H19',name:'深灰',hex:'#404040',brand:'Perler'},
+  {id:'H20',name:'灰色',hex:'#808080',brand:'Perler'},
+  {id:'H21',name:'浅灰',hex:'#C0C0C0',brand:'Perler'},
+  {id:'H22',name:'黑色',hex:'#1A1A1A',brand:'Perler'},
+  {id:'H23',name:'靛青',hex:'#2A5A7A',brand:'Perler'},
+  {id:'H24',name:'藏蓝',hex:'#2A3A5A',brand:'Perler'},
+  {id:'H25',name:'米色',hex:'#E8D8B8',brand:'Perler'},
+  {id:'H26',name:'杏色',hex:'#F0C8A0',brand:'Perler'},
+  {id:'H27',name:'珊瑚红',hex:'#E06050',brand:'Perler'},
+  {id:'H28',name:'草绿',hex:'#60A040',brand:'Perler'},
+  {id:'H29',name:'橄榄绿',hex:'#556B2F',brand:'Perler'},
+  {id:'H30',name:'天蓝',hex:'#87CEEB',brand:'Perler'},
+  {id:'H31',name:'海军蓝',hex:'#000080',brand:'Perler'},
+  {id:'H32',name:'金色',hex:'#DAA520',brand:'Perler'}
+];
+
+var beadGrid=[];  // 2D array of color indices
+var beadSize=38;
+var beadShowNum=true;
+var beadShowGrid=true;
+var currentBeadImage=null; // ImageData for import
+
+function hexToRgb(hex){
+  var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+function rgbDist(a,b){
+  return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]);
+}
+function nearestBeadColor(r,g,b){
+  var best=0,bestD=Infinity;
+  for(var i=0;i<BEAD_PALETTE.length;i++){
+    var c=hexToRgb(BEAD_PALETTE[i].hex);
+    var d=rgbDist([r,g,b],c);
+    if(d<bestD){bestD=d;best=i;}
+  }
+  return best;
+}
+
+// Generate blue calico pattern as pixel grid
+function generateBlueCalicoPattern(size){
+  var grid=[];
+  for(var y=0;y<size;y++){
+    grid[y]=[];
+    for(var x=0;x<size;x++){
+      grid[y][x]=0; // default white
+    }
+  }
+  var cx=size/2,cy=size/2;
+  var r=size*0.42;
+
+  // Background: fill with indigo
+  for(var y=0;y<size;y++){
+    for(var x=0;x<size;x++){
+      grid[y][x]=10; // indigo H10
+    }
+  }
+
+  // Central flower motif (white resist pattern)
+  // Main flower center
+  var fr=size*0.18;
+  for(var y=0;y<size;y++){
+    for(var x=0;x<size;x++){
+      var dx=x-cx,dy=y-cy;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<fr){
+        grid[y][x]=0; // white
+      }
+    }
+  }
+
+  // Petals (4 directions)
+  var petalR=size*0.12;
+  var petalDist=size*0.22;
+  var petals=[[0,-1],[0,1],[-1,0],[1,0]];
+  for(var p=0;p<4;p++){
+    var px=cx+petals[p][0]*petalDist;
+    var py=cy+petals[p][1]*petalDist;
+    for(var y=0;y<size;y++){
+      for(var x=0;x<size;x++){
+        var dx=x-px,dy=y-py;
+        if(Math.sqrt(dx*dx+dy*dy)<petalR){
+          grid[y][x]=0;
+        }
+      }
+    }
+  }
+
+  // Diagonal petals
+  var dpetalR=size*0.08;
+  var dpetalDist=size*0.26;
+  var dpetals=[[1,-1],[1,1],[-1,1],[-1,-1]];
+  for(var p=0;p<4;p++){
+    var px=cx+dpetals[p][0]*dpetalDist;
+    var py=cy+dpetals[p][1]*dpetalDist;
+    for(var y=0;y<size;y++){
+      for(var x=0;x<size;x++){
+        var dx=x-px,dy=y-py;
+        if(Math.sqrt(dx*dx+dy*dy)<dpetalR){
+          grid[y][x]=0;
+        }
+      }
+    }
+  }
+
+  // Corner ornaments (small flowers)
+  var cornerDist=size*0.35;
+  var cornerR=size*0.08;
+  var corners=[[-1,-1],[1,-1],[-1,1],[1,1]];
+  for(var c=0;c<4;c++){
+    var ccx=cx+corners[c][0]*cornerDist;
+    var ccy=cy+corners[c][1]*cornerDist;
+    for(var y=0;y<size;y++){
+      for(var x=0;x<size;x++){
+        var dx=x-ccx,dy=y-ccy;
+        if(Math.sqrt(dx*dx+dy*dy)<cornerR){
+          grid[y][x]=0;
+        }
+        // Sminner ring
+        if(Math.sqrt(dx*dx+dy*dy)<cornerR*0.5){
+          grid[y][x]=10; // back to indigo center
+        }
+      }
+    }
+  }
+
+  // Border frame
+  var borderW=Math.max(1,Math.floor(size*0.04));
+  for(var y=0;y<size;y++){
+    for(var x=0;x<size;x++){
+      if(x<borderW||x>=size-borderW||y<borderW||y>=size-borderW){
+        grid[y][x]=0; // white border
+      }
+    }
+  }
+
+  // Inner border line
+  var innerBorder=borderW+Math.max(1,Math.floor(size*0.02));
+  for(var y=0;y<size;y++){
+    for(var x=0;x<size;x++){
+      if(x===innerBorder||x===size-innerBorder-1||y===innerBorder||y===size-innerBorder-1){
+        grid[y][x]=22; // thin black outline H22
+      }
+    }
+  }
+
+  // Center dot
+  var dotR=Math.max(1,Math.floor(size*0.02));
+  for(var y=0;y<size;y++){
+    for(var x=0;x<size;x++){
+      if(Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy))<dotR){
+        grid[y][x]=22; // black center
+      }
+    }
+  }
+
+  return grid;
+}
+
+// Render the bead grid to canvas
+function renderBeadCanvas(){
+  var canvas=document.getElementById('bead-canvas');
+  var ctx=canvas.getContext('2d');
+  var size=beadSize;
+  var cellSize=Math.floor(720/size);
+  var totalW=cellSize*size;
+  canvas.width=totalW;
+  canvas.height=totalW;
+
+  ctx.clearRect(0,0,totalW,totalW);
+
+  // Draw background
+  ctx.fillStyle='#1a1a28';
+  ctx.fillRect(0,0,totalW,totalW);
+
+  // Draw beads
+  var colorCounts={};
+  for(var y=0;y<size;y++){
+    for(var x=0;x<size;x++){
+      var ci=beadGrid[y]&&beadGrid[y][x]!==undefined?beadGrid[y][x]:0;
+      var hex=BEAD_PALETTE[ci].hex;
+      var px=x*cellSize,py=y*cellSize;
+
+      // Bead circle
+      ctx.beginPath();
+      ctx.arc(px+cellSize/2,py+cellSize/2,cellSize*0.42,0,Math.PI*2);
+      ctx.fillStyle=hex;
+      ctx.fill();
+
+      // Bead highlight
+      ctx.beginPath();
+      ctx.arc(px+cellSize/2-cellSize*0.1,py+cellSize/2-cellSize*0.1,cellSize*0.12,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.18)';
+      ctx.fill();
+
+      // Grid line
+      if(beadShowGrid){
+        ctx.strokeStyle='rgba(255,255,255,0.06)';
+        ctx.lineWidth=0.5;
+        ctx.strokeRect(px,py,cellSize,cellSize);
+      }
+
+      // Color number
+      if(beadShowNum&&cellSize>=14){
+        ctx.fillStyle=hex==='#FFFFFF'||hex==='#F5F0E1'||hex==='#FFD700'||hex==='#87CEEB'||hex==='#E8D8B8'||hex==='#F0C8A0'||hex==='#C0C0C0'?'rgba(0,0,0,0.6)':'rgba(255,255,255,0.7)';
+        ctx.font='bold '+Math.max(7,Math.floor(cellSize*0.38))+'px sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        ctx.fillText(BEAD_PALETTE[ci].id,px+cellSize/2,py+cellSize/2);
+      }
+
+      colorCounts[ci]=(colorCounts[ci]||0)+1;
+    }
+  }
+
+  // Update info
+  document.getElementById('bead-total').textContent=size*size;
+  document.getElementById('bead-colors').textContent=Object.keys(colorCounts).length;
+  document.getElementById('bead-dim').textContent=size+'×'+size;
+
+  // Update palette counts
+  var swatches=document.querySelectorAll('#bead-palette .pal-swatch');
+  for(var i=0;i<swatches.length;i++){
+    var cntEl=swatches[i].querySelector('.count');
+    if(cntEl)cntEl.textContent=colorCounts[i]||'';
+  }
+
+  // Update stats
+  var statsEl=document.getElementById('bead-stats');
+  var sorted=Object.entries(colorCounts).sort(function(a,b){return b[1]-a[1]});
+  var statsH='';
+  for(var i=0;i<Math.min(8,sorted.length);i++){
+    var ci=parseInt(sorted[i][0]);
+    var pct=(sorted[i][1]*100/(size*size)).toFixed(1);
+    statsH+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+    statsH+='<div style="width:14px;height:14px;border-radius:3px;background:'+BEAD_PALETTE[ci].hex+';flex-shrink:0"></div>';
+    statsH+='<span style="flex:1">'+BEAD_PALETTE[ci].id+' '+BEAD_PALETTE[ci].name+'</span>';
+    statsH+='<span style="color:var(--gene);font-weight:600">'+sorted[i][1]+'颗 ('+pct+'%)</span>';
+    statsH+='</div>';
+  }
+  statsEl.innerHTML=statsH;
+}
+
+// Render palette panel
+function renderBeadPalette(){
+  var el=document.getElementById('bead-palette'),h='';
+  for(var i=0;i<BEAD_PALETTE.length;i++){
+    var c=BEAD_PALETTE[i];
+    h+='<div class="pal-swatch" data-ci="'+i+'" style="background:'+c.hex+'" title="'+c.id+' '+c.name+'">';
+    h+=c.id;
+    h+='<span class="count"></span>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+
+  // Click to show detail
+  var swatches=el.querySelectorAll('.pal-swatch');
+  for(var i=0;i<swatches.length;i++){
+    swatches[i].addEventListener('click',function(){
+      var ci=parseInt(this.getAttribute('data-ci'));
+      showBeadDetail(ci);
+    });
+  }
+}
+
+function showBeadDetail(ci){
+  var c=BEAD_PALETTE[ci];
+  var panel=document.getElementById('bead-detail-panel');
+  var el=document.getElementById('bead-detail');
+  panel.style.display='block';
+  var h='';
+  h+='<div class="swatch-big" style="background:'+c.hex+'"></div>';
+  h+='<div class="detail-row"><span>色号</span><span class="val">'+c.id+'</span></div>';
+  h+='<div class="detail-row"><span>名称</span><span class="val">'+c.name+'</span></div>';
+  h+='<div class="detail-row"><span>HEX</span><span class="val">'+c.hex+'</span></div>';
+  h+='<div class="detail-row"><span>品牌</span><span class="val">'+c.brand+'</span></div>';
+  // Count in current grid
+  var count=0;
+  for(var y=0;y<beadSize;y++)for(var x=0;x<beadSize;x++)if(beadGrid[y]&&beadGrid[y][x]===ci)count++;
+  h+='<div class="detail-row"><span>当前用量</span><span class="val" style="color:var(--gene)">'+count+' 颗</span></div>';
+  el.innerHTML=h;
+
+  // Highlight in palette
+  var swatches=document.querySelectorAll('#bead-palette .pal-swatch');
+  for(var i=0;i<swatches.length;i++){
+    swatches[i].classList.toggle('active',parseInt(swatches[i].getAttribute('data-ci'))===ci);
+  }
+}
+
+// Convert an image (from URL) to bead grid
+function imageToBeadGrid(img,size){
+  var canvas=document.createElement('canvas');
+  canvas.width=size;canvas.height=size;
+  var ctx=canvas.getContext('2d');
+  ctx.drawImage(img,0,0,size,size);
+  var data=ctx.getImageData(0,0,size,size).data;
+  var grid=[];
+  for(var y=0;y<size;y++){
+    grid[y]=[];
+    for(var x=0;x<size;x++){
+      var idx=(y*size+x)*4;
+      var r=data[idx],g=data[idx+1],b=data[idx+2],a=data[idx+3];
+      if(a<128){grid[y][x]=0;continue;} // transparent → white
+      grid[y][x]=nearestBeadColor(r,g,b);
+    }
+  }
+  return grid;
+}
+
+// Initialize beads section
+function initBeads(){
+  // Default: blue calico
+  beadGrid=generateBlueCalicoPattern(beadSize);
+  renderBeadPalette();
+  renderBeadCanvas();
+
+  // Grid size change
+  document.getElementById('bead-grid-size').addEventListener('change',function(){
+    beadSize=parseInt(this.value);
+    if(currentBeadImage){
+      beadGrid=imageToBeadGrid(currentBeadImage,beadSize);
+    }else{
+      beadGrid=generateBlueCalicoPattern(beadSize);
+    }
+    renderBeadCanvas();
+  });
+
+  // Show/hide numbers
+  document.getElementById('bead-show-num').addEventListener('change',function(){
+    beadShowNum=this.checked;
+    renderBeadCanvas();
+  });
+
+  // Show/hide grid
+  document.getElementById('bead-show-grid').addEventListener('change',function(){
+    beadShowGrid=this.checked;
+    renderBeadCanvas();
+  });
+
+  // Export
+  document.getElementById('btn-bead-export').addEventListener('click',function(){
+    var canvas=document.getElementById('bead-canvas');
+    var link=document.createElement('a');
+    link.download='拼豆图纸_'+beadSize+'x'+beadSize+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // Import from generated design
+  document.getElementById('btn-bead-from-gen').addEventListener('click',function(){
+    var imgEl=document.querySelector('#canvas img');
+    if(!imgEl){alert('请先在基因编辑实验室中生成一个织物设计');return;}
+    var img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      currentBeadImage=img;
+      beadGrid=imageToBeadGrid(img,beadSize);
+      document.getElementById('bead-preset-label').querySelector('.name').textContent='自定义设计';
+      document.getElementById('bead-preset-label').querySelector('.desc').textContent='Custom Design Import';
+      renderBeadCanvas();
+    };
+    img.src=imgEl.src;
+  });
+}
+
+// Hook init into DOMContentLoaded
+var origLoadAll=window.loadAll;
+window.addEventListener('DOMContentLoaded',function(){initBeads()});
+
+// ===== Floating Particles System =====
+(function(){
+  var canvas=document.getElementById('particles-canvas');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var particles=[];
+  var PARTICLE_COUNT=60;
+  var mouseX=-1000,mouseY=-1000;
+
+  function resize(){
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize',resize);
+
+  document.addEventListener('mousemove',function(e){
+    mouseX=e.clientX;mouseY=e.clientY;
+  });
+
+  function Particle(){
+    this.reset();
+  }
+  Particle.prototype.reset=function(){
+    this.x=Math.random()*canvas.width;
+    this.y=Math.random()*canvas.height;
+    this.vx=(Math.random()-.5)*.3;
+    this.vy=(Math.random()-.5)*.3;
+    this.size=Math.random()*2+.5;
+    this.opacity=Math.random()*.4+.1;
+    this.life=Math.random()*200+100;
+    this.maxLife=this.life;
+    // Random color: gene green, accent gold, or cyan
+    var colors=[[0,229,160],[201,169,110],[34,211,238],[167,139,250]];
+    var c=colors[Math.floor(Math.random()*colors.length)];
+    this.r=c[0];this.g=c[1];this.b=c[2];
+  };
+  Particle.prototype.update=function(){
+    // Mouse attraction
+    var dx=mouseX-this.x,dy=mouseY-this.y;
+    var dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<200&&dist>0){
+      var force=(200-dist)/200*.02;
+      this.vx+=dx/dist*force;
+      this.vy+=dy/dist*force;
+    }
+    this.vx*=.99;this.vy*=.99;
+    this.x+=this.vx;this.y+=this.vy;
+    this.life--;
+    if(this.life<=0||this.x<-50||this.x>canvas.width+50||this.y<-50||this.y>canvas.height+50){
+      this.reset();
+    }
+  };
+  Particle.prototype.draw=function(){
+    var fade=this.life<this.maxLife*.2?this.life/(this.maxLife*.2):1;
+    var a=this.opacity*fade;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fillStyle='rgba('+this.r+','+this.g+','+this.b+','+a+')';
+    ctx.fill();
+    // Glow
+    if(this.size>1.2){
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,this.size*3,0,Math.PI*2);
+      ctx.fillStyle='rgba('+this.r+','+this.g+','+this.b+','+a*.08+')';
+      ctx.fill();
+    }
+  };
+
+  // Initialize
+  for(var i=0;i<PARTICLE_COUNT;i++){
+    particles.push(new Particle());
+  }
+
+  // Draw connections between nearby particles
+  function drawConnections(){
+    for(var i=0;i<particles.length;i++){
+      for(var j=i+1;j<particles.length;j++){
+        var dx=particles[i].x-particles[j].x;
+        var dy=particles[i].y-particles[j].y;
+        var dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          var a=(1-dist/120)*.08;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y);
+          ctx.strokeStyle='rgba(0,229,160,'+a+')';
+          ctx.lineWidth=.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // DNA helix trail effect
+  var helixTime=0;
+  function drawHelixTrail(){
+    helixTime+=.008;
+    var cx=canvas.width*.5,cy=canvas.height*.5;
+    for(var i=0;i<40;i++){
+      var t=helixTime+i*.15;
+      var x1=cx+Math.sin(t)*120+i*2-40;
+      var y1=cy+Math.cos(t*.7)*60+i*3-60;
+      var x2=cx-Math.sin(t)*120+i*2-40;
+      var y2=cy-Math.cos(t*.7)*60+i*3-60;
+      var a=.015*(1-i/40);
+      ctx.beginPath();ctx.arc(x1,y1,1.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,229,160,'+a+')';ctx.fill();
+      ctx.beginPath();ctx.arc(x2,y2,1.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(201,169,110,'+a+')';ctx.fill();
+      // Cross connections
+      if(i%5===0){
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+        ctx.strokeStyle='rgba(0,229,160,'+a*.5+')';ctx.lineWidth=.3;ctx.stroke();
+      }
+    }
+  }
+
+  function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawHelixTrail();
+    for(var i=0;i<particles.length;i++){
+      particles[i].update();
+      particles[i].draw();
+    }
+    drawConnections();
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // Gen button click burst effect
+  var genBtn=document.getElementById('btn-generate');
+  if(genBtn){
+    genBtn.addEventListener('click',function(){
+      for(var i=0;i<20;i++){
+        var p=new Particle();
+        p.x=canvas.width/2+(Math.random()-.5)*200;
+        p.y=canvas.height/2+(Math.random()-.5)*100;
+        p.vx=(Math.random()-.5)*3;
+        p.vy=(Math.random()-.5)*3;
+        p.size=Math.random()*3+1;
+        p.opacity=.6;
+        p.life=60;
+        p.maxLife=60;
+        particles.push(p);
+      }
+      // Clean up excess particles
+      while(particles.length>PARTICLE_COUNT+30)particles.shift();
+    });
+  }
+})();
+
+</script>
+</body>
+</html>

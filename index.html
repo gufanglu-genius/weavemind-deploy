@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>织觉引擎 WeaveMind — AI家纺创新平台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%232c2420' rx='16'/><text x='50' y='58' text-anchor='middle' font-size='36' font-weight='800' fill='%23f5f0e8' font-family='Georgia'>W</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+/* ── 基础 ── */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Serif SC','Songti SC','Georgia',serif;
+  color:#2c2420;
+  background:#f5f0e8;
+  line-height:1.8;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%;height:auto}
+
+/* ── 导航 ── */
+.topnav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  height:52px;
+  background:rgba(44,36,20,.92);
+  backdrop-filter:blur(12px);
+  display:flex;align-items:center;
+  padding:0 48px;gap:32px;
+  font-size:11px;letter-spacing:.06em;
+  border-bottom:1px solid rgba(245,240,232,.08);
+}
+.topnav .logo{font-weight:700;font-size:14px;margin-right:auto;color:#f5f0e8;letter-spacing:.1em}
+.topnav a{color:rgba(245,240,232,.7);transition:color .2s}
+.topnav a:hover{color:#f5f0e8}
+.topnav a.active{color:#f5f0e8;font-weight:600}
+.topnav .cta-nav{
+  padding:6px 18px;background:rgba(245,240,232,.1);
+  border:1px solid rgba(245,240,232,.15);border-radius:4px;
+  color:#f5f0e8;font-weight:600;font-size:11px;letter-spacing:.1em;
+}
+
+/* ── Hero ── */
+.hero{
+  position:relative;
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;z-index:0;
+  background:url('/assets/hero-warm-fabric.png') center/cover no-repeat;
+}
+.hero-bg::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(170deg,rgba(44,36,20,.72) 0%,rgba(44,36,20,.35) 40%,rgba(44,36,20,.68) 100%);
+}
+.hero-content{
+  position:relative;z-index:1;text-align:center;max-width:720px;padding:0 24px;
+  opacity:0;transform:translateY(30px);
+  transition:all 1s cubic-bezier(.16,1,.3,1);
+}
+.hero-label{
+  display:inline-block;
+  padding:8px 24px;
+  border:1px solid rgba(245,240,232,.2);
+  font-size:11px;letter-spacing:.15em;
+  color:rgba(245,240,232,.7);margin-bottom:40px;
+  text-transform:uppercase;
+}
+.hero h1{
+  font-size:clamp(36px,6vw,62px);
+  font-weight:300;line-height:1.35;
+  color:#f5f0e8;letter-spacing:.06em;
+}
+.hero h1 strong{font-weight:800;background:linear-gradient(135deg,#d4a853,#f0d78c);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-en{display:block;font-size:14px;font-weight:300;letter-spacing:.3em;color:rgba(245,240,232,.85);margin-top:12px}
+.hero-sub{font-size:16px;color:rgba(245,240,232,.9);margin:32px 0 44px;line-height:2.2;font-weight:300}
+.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 36px;font-size:13px;font-weight:600;
+  letter-spacing:.08em;transition:all .35s;
+  border:none;cursor:pointer;font-family:inherit;
+}
+.btn-primary{background:#f5f0e8;color:#2c2420}
+.btn-primary:hover{background:#fff;transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,.2)}
+.btn-ghost-light{
+  background:transparent;color:rgba(245,240,232,.8);
+  border:1px solid rgba(245,240,232,.25);
+}
+.btn-ghost-light:hover{border-color:rgba(245,240,232,.5);color:#f5f0e8}
+.btn-dark{background:#2c2420;color:#f5f0e8}
+.btn-dark:hover{background:#1a1612;transform:translateY(-2px);box-shadow:0 8px 24px rgba(44,36,20,.15)}
+.btn-gold{background:#8b6914;color:#fff}
+.btn-gold:hover{background:#6d5210;transform:translateY(-2px);box-shadow:0 8px 24px rgba(139,105,20,.25)}
+.btn-green{background:#5a6e5a;color:#fff}
+.btn-green:hover{background:#3d4d3d;transform:translateY(-2px)}
+.btn-outline{background:transparent;color:#2c2420;border:1px solid rgba(44,36,32,.15)}
+.btn-outline:hover{border-color:#2c2420;background:rgba(44,36,32,.03)}
+
+/* ── 章节通用 ── */
+.chapter{
+  position:relative;
+  padding:120px 48px;
+  overflow:hidden;
+}
+.chapter-inner{max-width:1060px;margin:0 auto;position:relative;z-index:2}
+.chapter-bg{
+  position:absolute;inset:0;z-index:0;
+  background-size:cover;background-position:center;
+}
+.chapter-bg::after{content:'';position:absolute;inset:0}
+.chapter-num{
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(44,36,32,.45);margin-bottom:16px;
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+.chapter-num-light{color:rgba(245,240,232,.3)}
+.chapter-title{
+  font-size:clamp(22px,3.2vw,34px);
+  font-weight:700;line-height:1.5;
+  margin-bottom:12px;letter-spacing:.04em;
+}
+.chapter-title-light{color:#f5f0e8}
+.chapter-desc{
+  font-size:15px;color:rgba(44,36,32,.65);
+  margin-bottom:48px;max-width:580px;line-height:2;
+}
+.chapter-desc-light{color:rgba(245,240,232,.75)}
+
+/* ── 分割线 ── */
+.sep{
+  max-width:1060px;margin:0 auto;
+  padding:0 48px;
+}
+.sep-line{height:1px;background:linear-gradient(90deg,transparent,rgba(44,36,32,.1),transparent)}
+.sep-img{
+  height:200px;
+  background:url('/assets/story-silk-threads.png') center/cover no-repeat;
+  position:relative;
+  margin:0 -48px;
+}
+.sep-img::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,#f5f0e8,transparent 20%,transparent 80%,#f5f0e8);
+}
+
+/* ── 故事双栏 ── */
+.story-row{display:flex;gap:56px;align-items:center}
+.story-row.reverse{flex-direction:row-reverse}
+.story-img{flex:1;position:relative}
+.story-img img{
+  width:100%;border-radius:4px;
+  box-shadow:0 12px 48px rgba(44,36,20,.12);
+}
+.story-body{flex:1}
+.story-body h3{font-size:22px;font-weight:700;margin-bottom:16px;line-height:1.6}
+.story-body p{font-size:14px;color:rgba(44,36,32,.7);line-height:2.2;margin-bottom:24px}
+.story-meta{
+  padding:36px 40px;background:rgba(255,255,255,.8);
+  border:1px solid rgba(201,169,110,.2);border-radius:14px;
+  margin-bottom:28px;
+  box-shadow:0 4px 24px rgba(44,36,20,.06);
+}
+.story-meta-label{
+  font-size:22px;margin-bottom:20px;
+  letter-spacing:.06em;font-family:'Noto Serif SC',Georgia,serif;font-weight:700;
+  padding-bottom:16px;border-bottom:1px solid rgba(201,169,110,.12);
+  background:linear-gradient(135deg,#8b6914,#c9a96e,#8b6914);
+  background-size:200% 200%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+.story-tags{display:flex;gap:8px;flex-wrap:wrap}
+.story-tag{
+  padding:5px 14px;border:1px solid rgba(44,36,32,.12);
+  font-size:11px;border-radius:3px;color:rgba(44,36,32,.65);
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+.story-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;letter-spacing:.1em;color:rgba(44,36,32,.75);
+  border-bottom:1px solid rgba(44,36,32,.2);
+  padding-bottom:3px;transition:all .3s;
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+.story-link:hover{border-color:#2c2420;color:#2c2420}
+
+/* ── 痛点 ── */
+.pain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px}
+.pain-card{
+  padding:28px;
+  background:rgba(255,255,255,.4);
+  border:1px solid rgba(44,36,32,.06);border-radius:6px;
+}
+.pain-card .pc-num{
+  font-size:42px;font-weight:300;color:rgba(44,36,32,.45);
+  font-family:'Noto Serif SC',Georgia,serif;line-height:1;margin-bottom:12px;
+}
+.pain-card h4{font-size:16px;font-weight:700;margin-bottom:10px;letter-spacing:.02em;color:#c9a96e}
+.pain-card p{font-size:13px;color:rgba(44,36,32,.65);line-height:1.9}
+.pain-arrow{
+  text-align:center;padding:32px 0;
+  font-size:16px;color:#8b6914;
+  letter-spacing:.15em;font-family:'Noto Serif SC',Georgia,serif;font-weight:700;
+}
+.pain-solve{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.pain-solve-card{
+  padding:28px;
+  background:rgba(255,255,255,.4);
+  border:1px solid rgba(44,36,32,.06);border-radius:6px;
+}
+.pain-solve-card .psc-num{
+  font-size:42px;font-weight:300;color:rgba(90,110,90,.45);
+  font-family:'Noto Serif SC',Georgia,serif;line-height:1;margin-bottom:12px;
+}
+.pain-solve-card .psc-char{
+  font-size:48px;font-weight:800;
+  background:linear-gradient(135deg,#8b6914,#c9a96e);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;line-height:1;margin-bottom:12px;
+  font-family:'Noto Serif SC',Georgia,serif;
+  letter-spacing:.1em;
+}
+.pain-solve-card h4{font-size:16px;font-weight:700;margin-bottom:10px;color:#c9a96e;letter-spacing:.02em}
+.pain-solve-card p{font-size:13px;color:rgba(44,36,32,.65);line-height:1.9}
+
+/* ── 数据条 ── */
+.data-strip{
+  background:#2c2420;color:#f5f0e8;
+  padding:64px 48px;
+  position:relative;
+}
+.data-strip::before{
+  content:'';position:absolute;inset:0;
+  background:url('/assets/bg-linen-texture.png') center/cover;
+  opacity:.04;
+}
+.data-strip-inner{
+  max-width:1060px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:32px;
+  text-align:center;position:relative;z-index:1;
+}
+.data-strip .ds-num{font-size:40px;font-weight:200;display:block;line-height:1;font-family:'Noto Serif SC',Georgia,serif}
+.data-strip .ds-num strong{font-weight:800}
+.data-strip .ds-label{font-size:11px;opacity:.5;margin-top:8px;letter-spacing:.06em}
+.data-strip .ds-note{
+  font-size:10px;margin-top:8px;display:inline-block;
+  padding:3px 12px;border-radius:2px;
+  background:rgba(100,200,100,.12);color:rgba(100,200,100,.8);
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+
+/* ── DNA嵌入 ── */
+.dna-embed{display:flex;gap:40px;align-items:center;margin-top:20px}
+.dna-embed canvas{max-width:240px;width:100%}
+.dna-labels{flex:1}
+.dl-row{
+  display:flex;align-items:center;gap:14px;
+  padding:8px 0;
+}
+.dl-row+.dl-row{border-top:1px solid rgba(201,169,110,.08)}
+.dl-icon{width:8px;height:8px;border-radius:50%;background:#c9a96e;flex-shrink:0}
+.dl-name{font-size:13px;width:90px;flex-shrink:0;font-family:'Noto Serif SC',Georgia,serif;font-weight:600;color:rgba(44,36,32,.7);letter-spacing:.02em}
+.dl-bar{flex:1;height:5px;background:rgba(201,169,110,.08);border-radius:3px;overflow:hidden}
+.dl-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#c9a96e,#8b6914)}
+.dl-val{font-size:12px;font-weight:700;color:#8b6914;width:32px;text-align:right;font-family:'Noto Serif SC',Georgia,serif;flex-shrink:0}
+
+/* ── 趋势嵌入 ── */
+.trend-embed canvas{width:100%;max-width:100%}
+.trend-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.tm-item{
+  padding:16px;background:rgba(255,255,255,.5);
+  border:1px solid rgba(44,36,32,.06);border-radius:6px;
+  text-align:center;
+}
+.tm-score{font-size:28px;font-weight:200;display:block;font-family:'Noto Serif SC',Georgia,serif}
+.tm-score strong{font-weight:800}
+.tm-name{font-size:11px;font-weight:600;margin-top:4px}
+.tm-vel{font-size:9px;color:rgba(44,36,32,.55);margin-top:4px;font-family:'Noto Serif SC',Georgia,serif}
+
+/* ── 非遗 ── */
+.her-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.her-card{position:relative;height:240px;overflow:hidden;border-radius:4px}
+.her-card img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.her-card:hover img{transform:scale(1.05)}
+.her-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:24px;
+  background:linear-gradient(0deg,rgba(44,36,32,.7) 0%,transparent 100%);
+  color:#f5f0e8;
+}
+.her-overlay h4{font-size:15px;font-weight:600;margin-bottom:2px}
+.her-overlay span{font-size:11px;opacity:.7;font-family:'Noto Serif SC',Georgia,serif}
+
+/* ── CTA ── */
+.cta-section{
+  position:relative;
+  text-align:center;padding:120px 48px;
+  overflow:hidden;
+}
+.cta-bg{
+  position:absolute;inset:0;
+  background:url('/assets/cta-bg-weaving.png') center/cover no-repeat;
+}
+.cta-bg::after{content:'';position:absolute;inset:0;background:rgba(44,36,20,.82)}
+.cta-inner{position:relative;z-index:1}
+.cta-section h2{font-size:clamp(24px,3.5vw,38px);font-weight:300;color:#f5f0e8;margin-bottom:12px;letter-spacing:.06em}
+.cta-section h2 strong{font-weight:800}
+.cta-section p{color:rgba(245,240,232,.65);margin-bottom:40px;font-size:14px}
+.cta-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ── 页脚 ── */
+.foot{
+  padding:56px 48px;
+  border-top:1px solid rgba(44,36,32,.06);
+  text-align:center;
+  background:url('/assets/bg-paper-grain.png') center/cover;
+}
+.foot-brand{font-size:16px;font-weight:700;margin-bottom:6px;letter-spacing:.1em;color:#2c2420}
+.foot p{font-size:11px;color:rgba(44,36,32,.7);letter-spacing:.06em}
+.foot-links{display:flex;justify-content:center;gap:32px;margin-top:16px}
+.foot-links a{font-size:12px;color:rgba(44,36,32,.75);transition:color .2s;font-family:'Noto Serif SC',Georgia,serif}
+.foot-links a:hover{color:#8b6914}
+
+/* ── 滚动进度条 ── */
+.scroll-progress{
+  position:fixed;top:52px;left:0;right:0;height:2px;
+  background:rgba(44,36,20,.04);z-index:899;
+}
+.scroll-progress-bar{
+  height:100%;width:0;background:linear-gradient(90deg,#8b6914,#c49a2a);
+  transition:width .1s linear;
+}
+
+/* ── 回到顶部 ── */
+.back-top{
+  position:fixed;bottom:32px;right:32px;z-index:800;
+  width:44px;height:44px;
+  background:#2c2420;color:#f5f0e8;
+  border:none;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:pointer;
+  opacity:0;transform:translateY(20px);
+  transition:all .3s;
+  box-shadow:0 4px 16px rgba(44,36,20,.2);
+}
+.back-top.show{opacity:1;transform:translateY(0)}
+.back-top:hover{background:#8b6914;transform:translateY(-2px)}
+
+/* ── 动画 ── */
+.reveal{opacity:0;transform:translateY(40px);transition:all .8s cubic-bezier(.16,1,.3,1)}
+.reveal.active{opacity:1;transform:translateY(0)}
+.reveal-d1{transition-delay:.12s}
+.reveal-d2{transition-delay:.24s}
+.reveal-d3{transition-delay:.36s}
+.reveal-d4{transition-delay:.48s}
+
+/* 故事图片悬停 */
+.story-img img{
+  transition:transform .6s cubic-bezier(.16,1,.3,1),box-shadow .6s;
+}
+.story-img:hover img{
+  transform:scale(1.03);
+  box-shadow:0 16px 56px rgba(44,36,20,.18);
+}
+
+/* 非遗卡片悬停 */
+.her-card{
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+}
+.her-card:hover{
+  transform:translateY(-6px);
+}
+
+/* 痛点卡片悬停 */
+.pain-card{
+  transition:all .4s cubic-bezier(.16,1,.3,1);
+  will-change:transform,box-shadow;
+}
+.pain-card:hover{
+  transform:translateY(-8px) scale(1.02);
+  box-shadow:0 16px 48px rgba(44,36,20,.12),0 4px 12px rgba(44,36,20,.06);
+  border-color:rgba(201,169,110,.2);
+  background:rgba(255,255,255,.6);
+}
+.pain-solve-card{
+  transition:all .4s cubic-bezier(.16,1,.3,1);
+  will-change:transform,box-shadow;
+}
+.pain-solve-card:hover{
+  transform:translateY(-8px) scale(1.02);
+  box-shadow:0 16px 48px rgba(44,36,20,.12),0 4px 12px rgba(44,36,20,.06);
+  border-color:rgba(201,169,110,.2);
+  background:rgba(255,255,255,.6);
+}
+
+/* 数据条数字动画 */
+.ds-num{
+  transition:transform .5s cubic-bezier(.16,1,.3,1);
+}
+.data-strip-inner>div:hover .ds-num{
+  transform:scale(1.08);
+}
+
+/* 趋势卡片悬停 */
+.tm-item{
+  transition:all .3s cubic-bezier(.16,1,.3,1);
+}
+.tm-item:hover{
+  transform:translateY(-4px);
+  box-shadow:0 8px 24px rgba(44,36,20,.08);
+}
+
+/* 按钮脉冲 */
+.btn-gold{
+  animation:btnPulse 3s ease-in-out infinite;
+}
+@keyframes btnPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(139,105,20,.3)}
+  50%{box-shadow:0 0 0 8px rgba(139,105,20,0)}
+}
+
+/* DNA条动画 */
+.dl-fill{
+  transition:width 1.2s cubic-bezier(.16,1,.3,1);
+}
+
+/* 平滑锚点 */
+html{
+  scroll-behavior:smooth;
+  scroll-padding-top:60px;
+}
+
+/* 故事标签悬停 */
+.story-tag{
+  transition:all .25s;
+}
+.story-tag:hover{
+  background:rgba(44,36,32,.06);
+  border-color:rgba(44,36,32,.2);
+}
+
+/* 链接下划线动画 */
+.story-link::after{
+  content:'';position:absolute;bottom:0;left:0;width:0;height:1px;
+  background:#2c2420;transition:width .3s;
+}
+.story-link{position:relative}
+.story-link:hover::after{width:100%}
+
+/* ── 拔高过渡区 ── */
+.elevation-section{
+  position:relative;
+  padding:100px 48px;
+  background:#1a1612;
+  color:#f5f0e8;
+  text-align:center;
+  overflow:hidden;
+}
+.elevation-section .el-bg{
+  position:absolute;inset:0;
+  background:url('/assets/bg-elevation-dark.png') center/cover no-repeat;
+  opacity:.18;
+}
+.elevation-section::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,#2c2420 0%,transparent 20%,transparent 80%,#1a1612 100%);
+  pointer-events:none;
+}
+.elevation-inner{position:relative;z-index:2;max-width:800px;margin:0 auto}
+.el-steps{
+  display:flex;justify-content:center;align-items:center;gap:40px;margin-bottom:56px;
+}
+.el-step{text-align:center}
+.el-step .el-level{
+  font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(245,240,232,.35);margin-bottom:10px;
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+.el-step .el-icon-box{
+  width:72px;height:72px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;margin:0 auto 10px;
+  border:1px solid rgba(201,169,110,.2);
+  background:rgba(201,169,110,.06);
+  transition:all .6s;
+}
+.el-step.active .el-icon-box{
+  border-color:rgba(201,169,110,.6);
+  background:rgba(201,169,110,.15);
+  box-shadow:0 0 30px rgba(201,169,110,.2);
+}
+.el-step .el-name{
+  font-size:15px;font-weight:700;letter-spacing:.1em;
+  color:rgba(245,240,232,.6);
+  font-family:'Noto Serif SC',Georgia,serif;
+  transition:color .6s;
+}
+.el-step.active .el-name{color:#c9a96e}
+.el-arrow{
+  font-size:28px;color:rgba(201,169,110,.3);
+  animation:elFloat 2.5s ease-in-out infinite;
+}
+.el-arrow:nth-child(2){animation-delay:.3s}
+@keyframes elFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.elevation-quote{
+  font-size:clamp(18px,2.5vw,26px);
+  font-weight:300;line-height:2;color:rgba(245,240,232,.85);
+  font-family:'Noto Serif SC',Georgia,serif;
+  letter-spacing:.04em;
+}
+.elevation-quote strong{
+  font-weight:700;
+  background:linear-gradient(135deg,#c9a96e,#f0d78c);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.el-glow-line{
+  width:60px;height:2px;margin:32px auto 0;
+  background:linear-gradient(90deg,transparent,#c9a96e,transparent);
+}
+
+/* ── 艺术升华区 ── */
+.art-section{
+  position:relative;
+  padding:120px 48px;
+  overflow:hidden;
+  background:linear-gradient(135deg,rgba(201,169,110,.04),rgba(245,240,232,.3),rgba(201,169,110,.04));
+}
+.art-inner{max-width:1060px;margin:0 auto;position:relative;z-index:2}
+.art-gallery{
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:48px 0;
+}
+.art-gallery-img{
+  border-radius:6px;overflow:hidden;position:relative;
+  box-shadow:0 16px 56px rgba(44,36,20,.15);
+}
+.art-gallery-img img{
+  width:100%;display:block;
+  transition:transform .8s cubic-bezier(.16,1,.3,1);
+}
+.art-gallery-img:hover img{transform:scale(1.05)}
+.art-gallery-img .art-caption{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:20px 24px;
+  background:linear-gradient(0deg,rgba(44,36,20,.7),transparent);
+  color:#f5f0e8;
+}
+.art-gallery-img .art-caption span{
+  font-size:12px;letter-spacing:.1em;opacity:.8;
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+.art-quote{
+  text-align:center;
+  font-size:clamp(16px,2vw,22px);
+  font-style:italic;
+  color:#8b6914;
+  line-height:2;
+  font-family:'Noto Serif SC',Georgia,serif;
+  letter-spacing:.04em;
+  padding:24px 0;
+  border-top:1px solid rgba(201,169,110,.12);
+  border-bottom:1px solid rgba(201,169,110,.12);
+  max-width:700px;margin:0 auto;
+}
+.art-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px;
+}
+.art-stat{
+  text-align:center;padding:28px 16px;
+  background:rgba(255,255,255,.5);
+  border:1px solid rgba(201,169,110,.1);border-radius:10px;
+  transition:all .4s cubic-bezier(.16,1,.3,1);
+}
+.art-stat:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 36px rgba(44,36,20,.08);
+  border-color:rgba(201,169,110,.25);
+}
+.art-stat .as-num{
+  font-size:36px;font-weight:200;display:block;
+  font-family:'Noto Serif SC',Georgia,serif;
+  line-height:1;
+}
+.art-stat .as-num strong{font-weight:800}
+.art-stat .as-label{font-size:11px;opacity:.4;margin-top:8px;letter-spacing:.06em}
+.art-stat .as-sub{
+  font-size:10px;margin-top:6px;display:inline-block;
+  padding:2px 10px;border-radius:2px;
+  background:rgba(139,105,20,.08);color:#8b6914;
+  font-family:'Noto Serif SC',Georgia,serif;
+}
+
+/* ── 响应式 ── */
+@media(max-width:900px){
+  .story-row,.story-row.reverse{flex-direction:column}
+  .pain-grid,.pain-solve{grid-template-columns:1fr}
+  .data-strip-inner{grid-template-columns:repeat(2,1fr)}
+  .her-grid{grid-template-columns:1fr 1fr}
+  .dna-embed{flex-direction:column}
+  .trend-mini{grid-template-columns:repeat(2,1fr)}
+  .topnav{padding:0 24px;gap:20px}
+  .el-steps{flex-direction:column;gap:20px}
+  .el-arrow{transform:rotate(90deg)}
+  .art-gallery{grid-template-columns:1fr}
+  .art-stats{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .chapter{padding:60px 20px}
+  .hero{min-height:85vh}
+  .her-grid{grid-template-columns:1fr}
+  .data-strip{padding:40px 20px}
+  .data-strip-inner{grid-template-columns:1fr 1fr}
+  .cta-section{padding:60px 20px}
+  .sep{padding:0 20px}
+  .sep-img{margin:0 -20px;height:120px}
+  .foot{padding:36px 20px}
+  .topnav{gap:12px;font-size:11px}
+  .elevation-section{padding:60px 20px}
+  .art-section{padding:60px 20px}
+  .art-stats{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- 滚动进度条 -->
+<div class="scroll-progress"><div class="scroll-progress-bar" id="progressBar"></div></div>
+
+<!-- 回到顶部 -->
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0})">&#8593;</button>
+
+<!-- 导航 -->
+<nav class="topnav">
+  <div class="logo">织觉引擎 WeaveMind</div>
+  <a href="#story">故事</a>
+  <a href="#dna">审美基因</a>
+  <a href="#trends">趋势</a>
+  <a href="#ich">非遗</a>
+  <a href="/translator" target="_blank">审美翻译</a>
+  <a href="/spatial" target="_blank">空间感知</a>
+  <a href="/trend" target="_blank">趋势先知</a>
+  <a href="/gene" target="_blank">基因编辑</a>
+  <a href="/c2m.html" class="cta-nav">C2M 体验</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-label">让每个人都能设计自己的家</div>
+    <h1>一张照片，如何变成<br>你家客厅的<strong>窗帘</strong></h1>
+    <span class="hero-en">WeaveMind</span>
+    <p class="hero-sub">四大AI引擎协同，从一张灵感图片到真实空间预览，只需5分钟。</p>
+    <div class="hero-actions">
+      <a href="#story" class="btn btn-primary">阅读故事</a>
+      <a href="/translator" target="_blank" class="btn btn-ghost-light">开始体验</a>
+    </div>
+  </div>
+</section>
+
+<!-- 第一幕：灵感与痛点 -->
+<section class="chapter" id="story" style="background:#f5f0e8">
+  <div class="chapter-bg" style="background-image:url('/assets/story-wabi-interior.png');opacity:.08"></div>
+  <div class="chapter-inner">
+    <div class="chapter-num">Act 01 / 灵感</div>
+    <div class="chapter-title">小陈刷到一张侘寂风客厅照片，停了下来——<br>那种留白的宁静感，正是她想要的</div>
+    <div class="chapter-desc">可当她开始找窗帘，才发现这条路比想象中难得多。</div>
+    <div class="pain-grid reveal">
+      <div class="pain-card">
+        <div class="pc-num">01</div>
+        <h4>找设计师 —— 猜</h4>
+        <p>靠经验猜市场，年均命中率不足30%。一个花型从画稿到上架，至少3个月。</p>
+      </div>
+      <div class="pain-card">
+        <div class="pc-num">02</div>
+        <h4>买窗帘 —— 盲</h4>
+        <p>无法想象产品在自家空间的真实效果，"买家秀vs卖家秀"导致退货率高达25-35%。</p>
+      </div>
+      <div class="pain-card">
+        <div class="pc-num">03</div>
+        <h4>工厂生产 —— 赌</h4>
+        <p>赌对了赚，赌错了堆满仓库。120天库存周转，30%以上退货率。</p>
+      </div>
+    </div>
+    <div class="pain-arrow reveal">织觉引擎的出现，改变了这一切。</div>
+    <div class="pain-solve reveal">
+      <div class="pain-solve-card">
+        <div class="psc-char">算</div>
+        <h4>趋势先知</h4>
+        <p>6维信号融合分析，跨社交/时尚/文化/经济/搜索/设计社区，预测未来6个月趋势走向。</p>
+      </div>
+      <div class="pain-solve-card">
+        <div class="psc-char">造</div>
+        <h4>基因编辑</h4>
+        <p>8维审美DNA，AI秒级生成花型。支持变异与繁殖，让非设计师也能创造专业级设计。</p>
+      </div>
+      <div class="pain-solve-card">
+        <div class="psc-char">验</div>
+        <h4>空间感知</h4>
+        <p>上传房间照片，AI生成搭配效果预览。所见即所得，先试后买，消除信任鸿沟。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 分隔 -->
+<div class="sep"><div class="sep-line"></div></div>
+
+<!-- 第二幕：解码 -->
+<section class="chapter" id="dna">
+  <div class="chapter-inner">
+    <div class="story-row reveal">
+      <div class="story-img">
+        <img src="/assets/aesthetic-dna-viz.png" alt="审美DNA解码">
+      </div>
+      <div class="story-body">
+        <div class="chapter-num">Act 02 / 解码</div>
+        <h3>她上传了这张照片，AI读出了她的审美DNA</h3>
+        <p>织觉引擎的审美翻译器通过CV特征提取与AI视觉理解，将一张图片解构为8个可量化的审美维度 —— 不是滤镜参数，而是审美基因。</p>
+        <div class="story-meta">
+          <div class="story-meta-label">AI 识别出的审美 DNA</div>
+          <div class="dna-embed">
+            <canvas id="dnaRadar"></canvas>
+            <div class="dna-labels" id="dnaLabels"></div>
+          </div>
+        </div>
+        <a href="/translator" target="_blank" class="story-link">进入审美翻译器</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 丝线分隔 -->
+<div class="sep-img"></div>
+
+<!-- 第三幕：创造 -->
+<section class="chapter" style="background:rgba(44,36,20,.02)">
+  <div class="chapter-inner">
+    <div class="story-row reverse reveal">
+      <div class="story-img">
+        <img src="/assets/story-textile-workshop.png" alt="纺织工坊">
+      </div>
+      <div class="story-body">
+        <div class="chapter-num">Act 03 / 创造</div>
+        <h3>她在8个维度上微调，AI秒级生成专属花型</h3>
+        <p>小陈发现侘寂风的饱和度太低，她想要更暖一点。拖动滑块，AI立刻生成新的花型设计。她甚至可以"繁殖"两个风格 —— 把侘寂的肌理和多巴胺的色彩融合，创造出独一无二的设计。</p>
+        <div class="story-meta">
+          <div class="story-meta-label">基因编辑能力</div>
+          <div class="story-tags">
+            <span class="story-tag">8维DNA滑块</span>
+            <span class="story-tag">AI秒级生成</span>
+            <span class="story-tag">基因变异</span>
+            <span class="story-tag">融合繁殖</span>
+            <span class="story-tag">8种风格模板</span>
+          </div>
+        </div>
+        <a href="/gene" target="_blank" class="story-link">进入基因编辑器</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 分隔 -->
+<div class="sep"><div class="sep-line"></div></div>
+
+<!-- 第四幕：预览 -->
+<section class="chapter">
+  <div class="chapter-inner">
+    <div class="story-row reveal">
+      <div class="story-img">
+        <img src="/assets/story-cozy-room.png" alt="温馨客厅">
+      </div>
+      <div class="story-body">
+        <div class="chapter-num">Act 04 / 预览</div>
+        <h3>她上传了自家客厅的照片，看到了真实效果</h3>
+        <p>不用想象，不用猜测。小陈拍了一张自家客厅的照片，AI将她设计的花型面料渲染到真实空间中 —— 光影、褶皱、质感，所见即所得。</p>
+        <p style="margin-top:.8rem;font-style:italic;color:#8a7560;">小陈看到效果图时愣了几秒——比她想象中还要好。</p>
+        <div class="story-meta">
+          <div class="story-meta-label">空间感知能力</div>
+          <div class="story-tags">
+            <span class="story-tag">房间照片上传</span>
+            <span class="story-tag">AI场景生成</span>
+            <span class="story-tag">面料真实渲染</span>
+            <span class="story-tag">搭配评分</span>
+            <span class="story-tag">先试后买</span>
+          </div>
+        </div>
+        <a href="/spatial" target="_blank" class="story-link">进入空间感知</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 丝线分隔 -->
+<div class="sep-img" style="background-image:url('/assets/bg-linen-texture.png')"></div>
+
+<!-- 第五幕：确信 -->
+<section class="chapter" id="trends">
+  <div class="chapter-inner">
+    <div class="story-row reverse reveal">
+      <div class="story-img">
+        <div class="trend-embed">
+          <canvas id="trendChart"></canvas>
+          <div class="trend-mini" id="trendMini"></div>
+        </div>
+      </div>
+      <div class="story-body">
+        <div class="chapter-num">Act 05 / 确信</div>
+        <h3>她发现侘寂美学趋势得分87，正在持续上升</h3>
+        <p>"我选对了。"小陈看到趋势先知的数据 —— 侘寂美学在过去16个月持续走高，月增速2.3%，正处于成长期。这不是她的主观感觉，而是跨6维信号的客观验证。</p>
+        <div class="story-meta">
+          <div class="story-meta-label">趋势先知能力</div>
+          <div class="story-tags">
+            <span class="story-tag">6维信号融合</span>
+            <span class="story-tag">8大风格趋势</span>
+            <span class="story-tag">共振检测</span>
+            <span class="story-tag">S曲线预测</span>
+            <span class="story-tag">16个月走势</span>
+          </div>
+        </div>
+        <a href="/trend" target="_blank" class="story-link">进入趋势先知</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 数据支撑 -->
+<div class="data-intro" style="text-align:center;padding:3rem 2rem 1rem;font-size:1.15rem;color:#5a4a3a;letter-spacing:.02em;">小陈的故事不是个例。在全球最大家纺产业带南通，AI正在改写规则：</div>
+<section class="data-strip">
+  <div class="data-strip-inner">
+    <div class="reveal">
+      <span class="ds-num"><strong data-count="3200" data-suffix="">0</strong>亿</span>
+      <div class="ds-label">中国家纺市场规模</div>
+      <span class="ds-note">年增 6-8%</span>
+    </div>
+    <div class="reveal reveal-d1">
+      <span class="ds-num"><strong data-count="40" data-suffix="%+">0</strong></span>
+      <div class="ds-label">产业带全国占比</div>
+      <span class="ds-note">全球最大</span>
+    </div>
+    <div class="reveal reveal-d2">
+      <span class="ds-num">120 → <strong data-count="30" data-suffix="天">0</strong></span>
+      <div class="ds-label">库存周转 AI 优化</div>
+      <span class="ds-note">降幅 75%</span>
+    </div>
+    <div class="reveal reveal-d3">
+      <span class="ds-num">30% → <strong data-count="8" data-suffix="%">0</strong></span>
+      <div class="ds-label">退货率 AI 优化</div>
+      <span class="ds-note">预览降退货</span>
+    </div>
+  </div>
+</section>
+
+<!-- 拔高过渡区：AI → 艺术 → 文化 -->
+<section class="elevation-section reveal">
+  <div class="el-bg"></div>
+  <div class="elevation-inner">
+    <div class="el-steps">
+      <div class="el-step active" data-step="1">
+        <div class="el-level">Level 01</div>
+        <div class="el-icon-box">算</div>
+        <div class="el-name">AI 技术</div>
+      </div>
+      <div class="el-arrow">&#8594;</div>
+      <div class="el-step" data-step="2">
+        <div class="el-level">Level 02</div>
+        <div class="el-icon-box">美</div>
+        <div class="el-name">艺术表达</div>
+      </div>
+      <div class="el-arrow">&#8594;</div>
+      <div class="el-step" data-step="3">
+        <div class="el-level">Level 03</div>
+        <div class="el-icon-box">承</div>
+        <div class="el-name">文化传承</div>
+      </div>
+    </div>
+    <div class="elevation-quote">
+      AI不只是工具——它让每个人都能<strong>成为设计师</strong>，<br>让千年工艺在数字时代<strong>焕发新生</strong>
+    </div>
+    <div class="el-glow-line"></div>
+  </div>
+</section>
+
+<!-- 艺术升华区 -->
+<section class="art-section">
+  <div class="art-inner">
+    <div class="chapter-num reveal" style="text-align:center">Artistry</div>
+    <div class="chapter-title reveal" style="text-align:center">从像素到纱线，AI让设计回归艺术本身</div>
+    <div class="chapter-desc reveal" style="text-align:center;margin:0 auto 48px;max-width:640px">
+      当技术足够强大，它就消失了——留下的只有美。织觉引擎生成的每一幅花型，都可以被织造成触手可及的艺术品。
+    </div>
+    <div class="art-gallery reveal">
+      <div class="art-gallery-img">
+        <img src="/assets/art-textile-closeup.png" alt="AI花型织物细节">
+        <div class="art-caption"><span>AI生成花型 / 织物细节渲染</span></div>
+      </div>
+      <div class="art-gallery-img">
+        <img src="/assets/ich-fusion-preview.png" alt="非遗融合设计">
+        <div class="art-caption"><span>非遗工艺融合 / 蓝印花布 × 现代几何</span></div>
+      </div>
+    </div>
+    <div class="art-quote reveal">
+      "当AI理解了侘寂的留白、扎染的随机、沈绣的细腻——它生成的就不再是图案，而是有温度的设计。"
+    </div>
+    <div class="art-stats reveal">
+      <div class="art-stat">
+        <span class="as-num"><strong>6</strong>项</span>
+        <div class="as-label">南通非遗工艺数字化</div>
+        <span class="as-sub">国家级+省级+市级</span>
+      </div>
+      <div class="art-stat">
+        <span class="as-num"><strong>8</strong>维</span>
+        <div class="as-label">审美DNA量化维度</div>
+        <span class="as-sub">参数化控制生成</span>
+      </div>
+      <div class="art-stat">
+        <span class="as-num"><strong>5</strong>秒</span>
+        <div class="as-label">从灵感到花型生成</div>
+        <span class="as-sub">AI秒级创意迭代</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 非遗 -->
+<div class="ich-transition" style="text-align:center;padding:3rem 2rem 1rem;font-size:1.15rem;color:#5a4a3a;letter-spacing:.02em;">技术可以提效，但设计的灵感从何而来？答案藏在千年的织造智慧中。</div>
+<section class="chapter" id="ich" style="background:rgba(255,255,255,.3)">
+  <div class="chapter-bg" style="background-image:url('/assets/bg-paper-grain.png');opacity:.3"></div>
+  <div class="chapter-inner">
+    <div class="chapter-num">Heritage</div>
+    <div class="chapter-title">每一根纱线都有温度，<br>每一道纹样都是千年的回响</div>
+    <div class="chapter-desc">小陈选择的侘寂美学，其实根植于中国传统工艺。织觉引擎将6项非遗工艺数字化，让千年智慧在AI时代焕发新生。</div>
+    <div class="her-grid">
+      <div class="her-card reveal">
+        <img src="/assets/pattern-blue-calcio.png" alt="蓝印花布">
+        <div class="her-overlay"><h4>蓝印花布</h4><span>国家级非遗 / 明代传承</span></div>
+      </div>
+      <div class="her-card reveal reveal-d1">
+        <img src="/assets/pattern-tie-dye.png" alt="扎染技艺">
+        <div class="her-overlay"><h4>扎染技艺</h4><span>省级非遗 / 唐代传承</span></div>
+      </div>
+      <div class="her-card reveal reveal-d2">
+        <img src="/references/nantong-ich/nantong_shen_embroidery.png" alt="沈绣">
+        <div class="her-overlay"><h4>沈绣</h4><span>国家级非遗 / 清末传承</span></div>
+      </div>
+      <div class="her-card reveal">
+        <img src="/references/nantong-ich/nantong_tubu_weaving.png" alt="土布纺织">
+        <div class="her-overlay"><h4>土布纺织</h4><span>省级非遗 / 千年传承</span></div>
+      </div>
+      <div class="her-card reveal reveal-d1">
+        <img src="/references/nantong-ich/nantong_silk_weaving.png" alt="丝绸织造">
+        <div class="her-overlay"><h4>丝绸织造</h4><span>市级非遗 / 宋元传承</span></div>
+      </div>
+      <div class="her-card reveal reveal-d2">
+        <img src="/references/nantong-ich/nantong_kite_pattern.png" alt="板鹞风筝">
+        <div class="her-overlay"><h4>板鹞风筝</h4><span>国家级非遗 / 宋代传承</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-bg"></div>
+  <div class="cta-inner">
+    <h2>像小陈一样，5分钟看到你的家变样</h2>
+    <p>上传一张照片，AI帮你解码审美、生成花型、预览真实效果。</p>
+    <div class="cta-actions">
+      <a href="/translator" target="_blank" class="btn btn-primary">上传照片，开始体验</a>
+      <a href="#story" class="btn btn-ghost-light">再看一遍小陈的故事</a>
+    </div>
+  </div>
+</section>
+
+<!-- 页脚 -->
+<footer class="foot">
+  <div class="foot-brand">织觉引擎 WeaveMind</div>
+  <p>AI + 家纺电商创新平台</p>
+  <div class="foot-links">
+    <a href="/translator" target="_blank">审美翻译器</a>
+    <a href="/gene" target="_blank">基因编辑器</a>
+    <a href="/spatial" target="_blank">空间感知</a>
+    <a href="/trend" target="_blank">趋势先知</a>
+    <a href="/c2m.html">C2M 体验</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+
+// ── 滚动进度条 ──
+var progressBar=document.getElementById('progressBar');
+var backTop=document.getElementById('backTop');
+
+function onScroll(){
+  var sy=window.scrollY;
+  var docH=document.documentElement.scrollHeight-window.innerHeight;
+  var pct=Math.min(sy/docH*100,100);
+  if(progressBar)progressBar.style.width=pct+'%';
+  if(backTop)backTop.classList.toggle('show',sy>600);
+}
+window.addEventListener('scroll',onScroll,{passive:true});
+onScroll();
+
+// ── 视差滚动 ──
+var heroBg=document.querySelector('.hero-bg');
+var parallaxEls=document.querySelectorAll('.chapter-bg');
+
+function parallax(){
+  var sy=window.scrollY;
+  // Hero parallax
+  if(heroBg){
+    var heroH=document.querySelector('.hero').offsetHeight;
+    if(sy<heroH){
+      heroBg.style.transform='translateY('+sy*0.35+'px) scale('+(1+sy*0.0002)+')';
+    }
+  }
+  // Chapter bg parallax
+  parallaxEls.forEach(function(el){
+    var sec=el.parentElement;
+    var rect=sec.getBoundingClientRect();
+    var winH=window.innerHeight;
+    if(rect.top<winH&&rect.bottom>0){
+      var offset=(rect.top/winH-0.5)*40;
+      el.style.transform='translateY('+offset+'px)';
+    }
+  });
+}
+window.addEventListener('scroll',parallax,{passive:true});
+parallax();
+
+// ── 滚动动画（交错） ──
+var observer=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.classList.add('active');
+      // 子元素交错动画
+      var children=e.target.querySelectorAll('[data-stagger]');
+      children.forEach(function(c,i){
+        c.style.transitionDelay=(i*0.08)+'s';
+        c.classList.add('active');
+      });
+    }
+  });
+},{threshold:0.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(function(el){observer.observe(el)});
+
+// ── 数字滚动计数器 ──
+var counterObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting&&!e.target.dataset.counted){
+      e.target.dataset.counted='1';
+      animateCounter(e.target);
+    }
+  });
+},{threshold:0.5});
+
+function animateCounter(el){
+  var nums=el.querySelectorAll('[data-count]');
+  nums.forEach(function(numEl){
+    var target=parseInt(numEl.dataset.count);
+    var suffix=numEl.dataset.suffix||'';
+    var current=0;
+    var duration=1200;
+    var start=performance.now();
+    function step(now){
+      var progress=Math.min((now-start)/duration,1);
+      var ease=1-Math.pow(1-progress,3);
+      current=Math.round(target*ease);
+      numEl.textContent=current.toLocaleString()+suffix;
+      if(progress<1)requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+// 给数据条添加 data-count 属性
+var dsItems=document.querySelectorAll('.data-strip-inner>div');
+dsItems.forEach(function(item){
+  counterObserver.observe(item);
+});
+
+// ── DNA 标签 ──
+var dnaDims=[
+  {name:'色彩温度',wabi:70,dopa:65,quiet:40},
+  {name:'饱和度',wabi:20,dopa:95,quiet:10},
+  {name:'图案复杂度',wabi:15,dopa:60,quiet:5},
+  {name:'织物肌理',wabi:75,dopa:25,quiet:30},
+  {name:'风格倾向',wabi:30,dopa:85,quiet:55},
+  {name:'材质厚薄',wabi:55,dopa:30,quiet:45},
+  {name:'光泽度',wabi:15,dopa:70,quiet:60},
+  {name:'自然感',wabi:90,dopa:15,quiet:65}
+];
+
+var dlDiv=document.getElementById('dnaLabels');
+dnaDims.forEach(function(d,i){
+  var row=document.createElement('div');
+  row.className='dl-row';
+  row.style.opacity='0';
+  row.style.transform='translateX(-20px)';
+  row.style.transition='all .5s cubic-bezier(.16,1,.3,1) '+(i*0.06)+'s';
+  row.innerHTML=
+    '<span class="dl-icon"></span>'+
+    '<span class="dl-name">'+d.name+'</span>'+
+    '<div class="dl-bar"><div class="dl-fill" style="width:0%;background:#8b7d6b" data-width="'+d.wabi+'"></div></div>'+
+    '<span class="dl-val">'+d.wabi+'</span>';
+  dlDiv.appendChild(row);
+});
+
+// DNA 标签进入动画
+var dnaObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      var rows=e.target.querySelectorAll('.dl-row');
+      rows.forEach(function(r){
+        r.style.opacity='1';
+        r.style.transform='translateX(0)';
+      });
+      // 动画条
+      setTimeout(function(){
+        e.target.querySelectorAll('.dl-fill').forEach(function(f){
+          f.style.width=f.dataset.width+'%';
+        });
+      },300);
+    }
+  });
+},{threshold:0.3});
+if(dlDiv)dnaObserver.observe(dlDiv);
+
+// ── Chart.js（延迟加载） ──
+var chartsLoaded=false;
+var chartObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting&&!chartsLoaded){
+      chartsLoaded=true;
+      loadCharts();
+    }
+  });
+},{threshold:0.2});
+
+var radarCanvas=document.getElementById('dnaRadar');
+var trendCanvas=document.getElementById('trendChart');
+if(radarCanvas)chartObserver.observe(radarCanvas);
+if(trendCanvas)chartObserver.observe(trendCanvas);
+
+function loadCharts(){
+  // DNA 雷达图
+  if(radarCanvas) new Chart(radarCanvas,{
+    type:'radar',
+    data:{
+      labels:dnaDims.map(function(d){return d.name}),
+      datasets:[
+        {label:'侘寂基因',data:dnaDims.map(function(d){return d.wabi}),borderColor:'#8b7d6b',backgroundColor:'rgba(139,125,107,.1)',pointBackgroundColor:'#8b7d6b',borderWidth:2,pointRadius:3},
+        {label:'多巴胺基因',data:dnaDims.map(function(d){return d.dopa}),borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,.1)',pointBackgroundColor:'#ff6b6b',borderWidth:2,pointRadius:3},
+        {label:'静奢基因',data:dnaDims.map(function(d){return d.quiet}),borderColor:'#d4c9b8',backgroundColor:'rgba(212,201,184,.1)',pointBackgroundColor:'#d4c9b8',borderWidth:2,pointRadius:3}
+      ]
+    },
+    options:{
+      responsive:true,
+      animation:{duration:1200,easing:'easeOutQuart'},
+      scales:{r:{min:0,max:100,ticks:{stepSize:25,display:false},grid:{color:'rgba(44,36,20,.08)'},pointLabels:{font:{size:10,family:'Noto Serif SC',weight:'600'},color:'rgba(44,36,20,.7)'}}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:9,family:'Noto Serif SC'},padding:10,usePointStyle:true,pointStyle:'circle'}}}
+    }
+  });
+
+  // 趋势曲线图
+  if(trendCanvas) new Chart(trendCanvas,{
+    type:'line',
+    data:{
+      labels:['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月','6月','7月','8月','9月'],
+      datasets:[
+        {label:'侘寂美学',data:[45,48,52,55,58,62,65,68,72,76,80,84,87,90,92,94],borderColor:'#8b7d6b',tension:.4,pointRadius:0,borderWidth:2,fill:false},
+        {label:'温柔极简',data:[60,62,65,68,70,72,75,78,80,82,83,84,85,85,86,86],borderColor:'#c5b9a8',tension:.4,pointRadius:0,borderWidth:2,fill:false},
+        {label:'多巴胺家居',data:[30,35,40,48,55,60,65,68,72,75,78,80,82,83,84,85],borderColor:'#ff6b6b',tension:.4,pointRadius:0,borderWidth:2,fill:false},
+        {label:'数字花园',data:[15,18,22,28,35,40,45,50,55,58,62,65,68,71,73,75],borderColor:'#7b68ee',tension:.4,pointRadius:0,borderWidth:2,fill:false}
+      ]
+    },
+    options:{
+      responsive:true,
+      animation:{duration:1500,easing:'easeOutQuart'},
+      interaction:{mode:'index',intersect:false},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10}}},
+        y:{min:0,max:100,grid:{color:'rgba(44,36,20,.04)'},ticks:{font:{size:10}}}
+      },
+      plugins:{legend:{position:'bottom',labels:{font:{size:9,family:'Noto Serif SC'},padding:8,usePointStyle:true,pointStyle:'circle'}}}
+    }
+  });
+}
+
+// ── 趋势迷你卡片 ──
+var trends=[
+  {name:'侘寂美学',score:87,color:'#8b7d6b',vel:'2.3'},
+  {name:'温柔极简',score:85,color:'#c5b9a8',vel:'1.5'},
+  {name:'静奢风',score:82,color:'#d4c9b8',vel:'1.8'},
+  {name:'多巴胺家居',score:79,color:'#ff6b6b',vel:'3.1'}
+];
+
+var tmDiv=document.getElementById('trendMini');
+trends.forEach(function(t,i){
+  var item=document.createElement('div');
+  item.className='tm-item';
+  item.style.opacity='0';
+  item.style.transform='translateY(20px)';
+  item.style.transition='all .5s cubic-bezier(.16,1,.3,1) '+(i*0.1)+'s';
+  item.innerHTML=
+    '<span class="tm-score" style="color:'+t.color+'"><strong>'+t.score+'</strong></span>'+
+    '<div class="tm-name">'+t.name+'</div>'+
+    '<div class="tm-vel">月增 '+t.vel+'%</div>';
+  tmDiv.appendChild(item);
+});
+
+var tmObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      var items=e.target.querySelectorAll('.tm-item');
+      items.forEach(function(item){
+        item.style.opacity='1';
+        item.style.transform='translateY(0)';
+      });
+    }
+  });
+},{threshold:0.3});
+if(tmDiv)tmObserver.observe(tmDiv);
+
+// ── 拔高阶梯动画 ──
+var elSteps=document.querySelector('.el-steps');
+if(elSteps){
+  var elObserver=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        var steps=e.target.querySelectorAll('.el-step');
+        steps.forEach(function(s,i){
+          setTimeout(function(){
+            s.classList.add('active');
+          },i*500);
+        });
+        elObserver.unobserve(e.target);
+      }
+    });
+  },{threshold:0.5});
+  elObserver.observe(elSteps);
+}
+
+// ── Nav active ──
+var sids=['story','dna','trends','ich'];
+var nlinks=document.querySelectorAll('.topnav a[href^="#"]');
+function updateNav(){
+  var sy=window.scrollY;
+  for(var i=sids.length-1;i>=0;i--){
+    var s=document.getElementById(sids[i]);
+    if(s&&s.offsetTop-120<=sy){
+      for(var j=0;j<nlinks.length;j++)nlinks[j].classList.remove('active');
+      if(nlinks[i])nlinks[i].classList.add('active');
+      break;
+    }
+  }
+}
+window.addEventListener('scroll',updateNav,{passive:true});
+updateNav();
+
+// ── 平滑锚点 ──
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click',function(e){
+    var id=this.getAttribute('href').slice(1);
+    var target=document.getElementById(id);
+    if(target){
+      e.preventDefault();
+      var y=target.offsetTop-60;
+      window.scrollTo({top:y,behavior:'smooth'});
+    }
+  });
+});
+
+// ── 图片懒加载 ──
+var lazyImgs=document.querySelectorAll('img[data-src]');
+var imgObserver=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.src=e.target.dataset.src;
+      e.target.removeAttribute('data-src');
+      imgObserver.unobserve(e.target);
+    }
+  });
+},{rootMargin:'200px'});
+lazyImgs.forEach(function(img){imgObserver.observe(img)});
+
+// ── Hero 文字动画 ──
+setTimeout(function(){
+  var heroContent=document.querySelector('.hero-content');
+  if(heroContent){
+    heroContent.style.opacity='1';
+    heroContent.style.transform='translateY(0)';
+  }
+},200);
+
+})();
+</script>
+</body>
+</html>

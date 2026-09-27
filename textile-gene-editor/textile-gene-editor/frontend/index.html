@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>织物基因编辑器 — WeaveMind</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Serif SC',Georgia,serif;background:#f5f0e8;color:#2c2420;line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid rgba(44,36,20,.08)}
+.header h1{font-size:24px;font-weight:700}
+.header .badge{font-size:11px;opacity:.3;letter-spacing:.1em}
+.back{font-size:13px;opacity:.4;text-decoration:none}.back:hover{opacity:1}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+@media(max-width:768px){.layout{grid-template-columns:1fr}}
+.panel{background:rgba(255,255,255,.5);border:1px solid rgba(44,36,20,.06);border-radius:14px;padding:28px}
+.panel-title{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.slider-group{margin-bottom:16px}
+.slider-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.slider-label .name{font-size:13px;font-weight:500}
+.slider-label .icon{font-size:16px}
+.slider-label .val{font-size:12px;opacity:.3;font-family:monospace}
+input[type=range]{width:100%;height:6px;-webkit-appearance:none;background:rgba(44,36,20,.08);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#2c2420;cursor:pointer;border:3px solid #f5f0e8;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.presets{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+.preset-btn{
+  padding:10px;border:1px solid rgba(44,36,20,.08);border-radius:8px;
+  background:rgba(255,255,255,.4);cursor:pointer;text-align:left;transition:all .2s;
+  font-family:inherit;font-size:12px;
+}
+.preset-btn:hover{border-color:rgba(44,36,20,.2);background:rgba(255,255,255,.7)}
+.preset-btn.active{border-color:#2c2420;background:rgba(44,36,20,.04)}
+.preset-btn .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.preset-btn .pname{font-weight:600}
+.preset-btn .pdesc{font-size:10px;opacity:.4;display:block;margin-top:2px}
+.actions{display:flex;gap:10px;margin-top:20px}
+.btn{
+  flex:1;padding:12px;border:none;border-radius:8px;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:600;transition:all .2s;
+}
+.btn-primary{background:#2c2420;color:#f5f0e8}
+.btn-primary:hover{background:#1a1612}
+.btn-secondary{background:rgba(44,36,20,.06);color:#2c2420}
+.btn-secondary:hover{background:rgba(44,36,20,.1)}
+.btn-mutate{background:#8b6914;color:#fff}
+.btn-mutate:hover{background:#6d5210}
+.preview-area{
+  min-height:400px;display:flex;align-items:center;justify-content:center;
+  border:2px dashed rgba(44,36,20,.08);border-radius:12px;
+  overflow:hidden;position:relative;background:rgba(255,255,255,.3);
+}
+.preview-area img{max-width:100%;max-height:500px;object-fit:contain}
+.preview-area .placeholder{text-align:center;opacity:.25;font-size:14px}
+.prompt-box{
+  margin-top:16px;padding:12px;background:rgba(44,36,20,.02);border-radius:8px;
+  font-size:11px;font-family:monospace;color:rgba(44,36,20,.5);
+  max-height:80px;overflow-y:auto;word-break:break-all;
+}
+.history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:20px}
+.history-item{border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .2s}
+.history-item:hover{border-color:#2c2420}
+.history-item img{width:100%;height:100px;object-fit:cover}
+.breed-panel{margin-top:20px;padding:16px;background:rgba(139,105,20,.04);border-radius:10px;border:1px solid rgba(139,105,20,.1)}
+.breed-panel h4{font-size:14px;margin-bottom:12px}
+.breed-row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.breed-row select{flex:1;padding:8px;border:1px solid rgba(44,36,20,.1);border-radius:6px;font-family:inherit;background:#fff}
+.loading{position:absolute;inset:0;background:rgba(245,240,232,.8);display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.6;display:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="/" class="back">← 返回织觉引擎</a>
+  <div class="header">
+    <h1>🧬 织物基因编辑器</h1>
+    <span class="badge">TEXTILE GENE EDITOR · 8维审美DNA</span>
+  </div>
+
+  <div class="layout">
+    <!-- 左：控制面板 -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">🎨 DNA模板</div>
+        <div class="presets" id="presets"></div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-title">⚙️ 基因参数</div>
+        <div id="sliders"></div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="generate()">✨ AI生成花型</button>
+          <button class="btn btn-mutate" onclick="mutate()">🔀 基因变异</button>
+          <button class="btn btn-secondary" onclick="resetDNA()">↺ 重置</button>
+        </div>
+      </div>
+
+      <div class="panel breed-panel">
+        <h4>🧬 基因繁殖（杂交）</h4>
+        <div class="breed-row">
+          <select id="parentA"><option>选择父本基因</option></select>
+          <span>×</span>
+          <select id="parentB"><option>选择母本基因</option></select>
+          <button class="btn btn-secondary" onclick="breed()" style="flex:0 0 auto;padding:8px 16px">繁殖</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：预览 -->
+    <div>
+      <div class="panel">
+        <div class="panel-title">🖼 AI生成预览</div>
+        <div class="preview-area" id="preview">
+          <div class="placeholder">调整DNA参数后点击"AI生成花型"<br>或选择一个DNA模板开始</div>
+        </div>
+        <div class="prompt-box" id="promptBox" style="display:none"></div>
+      </div>
+
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-title">📜 生成历史</div>
+        <div class="history-grid" id="history"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/gene';
+let currentDNA = {};
+let presets = {};
+let dimensions = {};
+
+async function init() {
+  try {
+    const [gRes, pRes] = await Promise.all([
+      fetch(`${API}/api/genome`).then(r=>r.json()),
+      fetch(`${API}/api/presets`).then(r=>r.json())
+    ]);
+    dimensions = gRes.dimensions;
+    presets = pRes.presets;
+
+    // 渲染滑块
+    const sDiv = document.getElementById('sliders');
+    for (const [k, d] of Object.entries(dimensions)) {
+      sDiv.innerHTML += `
+        <div class="slider-group">
+          <div class="slider-label">
+            <span class="icon">${d.icon}</span>
+            <span class="name">${d.name}</span>
+            <span class="val" id="val_${k}">50</span>
+          </div>
+          <input type="range" min="0" max="100" value="50" id="slider_${k}"
+            oninput="updateVal('${k}',this.value)">
+        </div>`;
+    }
+
+    // 渲染预设
+    const pDiv = document.getElementById('presets');
+    const parentA = document.getElementById('parentA');
+    const parentB = document.getElementById('parentB');
+    for (const [pid, p] of Object.entries(presets)) {
+      pDiv.innerHTML += `
+        <div class="preset-btn" id="preset_${pid}" onclick="applyPreset('${pid}')">
+          <span class="dot" style="background:${p.color}"></span>
+          <span class="pname">${p.name}</span>
+          <span class="pdesc">${p.desc}</span>
+        </div>`;
+      parentA.innerHTML += `<option value="${pid}">${p.name}</option>`;
+      parentB.innerHTML += `<option value="${pid}">${p.name}</option>`;
+    }
+
+    // 加载历史
+    loadHistory();
+  } catch(e) {
+    console.error(e);
+    document.querySelector('.container').innerHTML += '<p style="color:red;text-align:center;margin-top:40px">⚠️ 请先启动基因编辑器 (port 5003)</p>';
+  }
+}
+
+function updateVal(k, v) {
+  document.getElementById(`val_${k}`).textContent = v;
+  currentDNA[k] = parseInt(v);
+}
+
+function applyPreset(pid) {
+  const p = presets[pid];
+  if (!p) return;
+  currentDNA = {...p.dna};
+  for (const [k, v] of Object.entries(p.dna)) {
+    const slider = document.getElementById(`slider_${k}`);
+    if (slider) { slider.value = v; document.getElementById(`val_${k}`).textContent = v; }
+  }
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`preset_${pid}`).classList.add('active');
+}
+
+function resetDNA() {
+  currentDNA = {};
+  for (const k of Object.keys(dimensions)) {
+    const slider = document.getElementById(`slider_${k}`);
+    if (slider) { slider.value = 50; document.getElementById(`val_${k}`).textContent = 50; }
+  }
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+}
+
+async function generate() {
+  const dna = {};
+  for (const k of Object.keys(dimensions)) {
+    dna[k] = parseInt(document.getElementById(`slider_${k}`).value);
+  }
+  const activePreset = document.querySelector('.preset-btn.active');
+  const presetId = activePreset ? activePreset.id.replace('preset_','') : '';
+
+  const preview = document.getElementById('preview');
+  preview.innerHTML = '<div class="loading" style="display:flex">⏳ AI正在生成花型...</div>';
+
+  try {
+    const res = await fetch(`${API}/api/generate`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({dna, preset_id: presetId})
+    });
+    const data = await res.json();
+    if (data.success) {
+      preview.innerHTML = `<img src="${API}${data.image_url}" alt="生成结果">`;
+      document.getElementById('promptBox').style.display = 'block';
+      document.getElementById('promptBox').textContent = data.prompt;
+      loadHistory();
+    } else {
+      preview.innerHTML = `<div class="placeholder">❌ ${data.error}</div>`;
+    }
+  } catch(e) {
+    preview.innerHTML = '<div class="placeholder">❌ 生成失败，请检查API配置</div>';
+  }
+}
+
+async function mutate() {
+  const dna = {};
+  for (const k of Object.keys(dimensions)) {
+    dna[k] = parseInt(document.getElementById(`slider_${k}`).value);
+  }
+  try {
+    const res = await fetch(`${API}/api/mutate`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({dna, intensity: 20})
+    });
+    const data = await res.json();
+    for (const [k, v] of Object.entries(data.dna)) {
+      const slider = document.getElementById(`slider_${k}`);
+      if (slider) { slider.value = v; document.getElementById(`val_${k}`).textContent = v; }
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function breed() {
+  const pidA = document.getElementById('parentA').value;
+  const pidB = document.getElementById('parentB').value;
+  if (!presets[pidA] || !presets[pidB]) return alert('请选择两个基因模板');
+  try {
+    const res = await fetch(`${API}/api/breed`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({parent_a: presets[pidA].dna, parent_b: presets[pidB].dna, ratio: 0.5})
+    });
+    const data = await res.json();
+    for (const [k, v] of Object.entries(data.dna)) {
+      const slider = document.getElementById(`slider_${k}`);
+      if (slider) { slider.value = v; document.getElementById(`val_${k}`).textContent = v; }
+    }
+    document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  } catch(e) { console.error(e); }
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API}/api/history`);
+    const data = await res.json();
+    document.getElementById('history').innerHTML = data.history.slice(0,12).map(h =>
+      `<div class="history-item"><img src="${API}${h.img_url}" alt="${h.id}" onclick="document.getElementById('preview').innerHTML='<img src=\\'${API}${h.img_url}\\'>'"></div>`
+    ).join('');
+  } catch(e) {}
+}
+
+init();
+</script>
+</body>
+</html>

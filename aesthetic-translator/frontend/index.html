@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AestheticTranslator — 织觉翻译器</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1816;--ink2:#3d3833;--ink3:#7a7268;--ink4:#b5ada3;
+  --paper:#f6f2ec;--paper2:#ece6dc;--paper3:#e2dbd0;
+  --warm:#d4a574;--warm2:#b8875a;--warm-d:rgba(212,165,116,.12);
+  --indigo:#2c4a6e;--indigo2:#1a3556;
+  --red:#a04040;--green:#4a7a5a;
+  --r:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--paper);background-image:url('/assets/bg-aesthetic-soft.png');background-size:600px;background-repeat:repeat;color:var(--ink);min-height:100vh;line-height:1.6}
+
+/* Layout */
+.wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+
+/* Header */
+header{border-bottom:1px solid var(--paper3);padding:20px 0}
+header .inner{display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;letter-spacing:1px}
+.brand h1 em{font-style:normal;color:var(--warm2)}
+.brand .sep{color:var(--paper3);font-size:14px}
+.brand .sub{font-size:12px;color:var(--ink3);letter-spacing:.5px}
+.header-r{display:flex;align-items:center;gap:20px}
+.header-r a{font-size:12px;color:var(--ink3);text-decoration:none;border-bottom:1px solid var(--paper3);padding-bottom:1px;transition:color .2s}
+.header-r a:hover{color:var(--warm2);border-color:var(--warm2)}
+.pill{font-size:11px;padding:4px 12px;border-radius:20px;background:var(--warm-d);color:var(--warm2);font-weight:500}
+
+/* Nav */
+nav{display:flex;gap:0;border-bottom:1px solid var(--paper3);margin-bottom:28px}
+nav a{padding:12px 20px;font-size:13px;color:var(--ink3);text-decoration:none;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px}
+nav a:hover{color:var(--ink)}
+nav a.on{color:var(--ink);border-bottom-color:var(--warm2);font-weight:500}
+
+.sec{display:none}.sec.on{display:block}
+
+/* Grid */
+.grid3{display:grid;grid-template-columns:280px 1fr 280px;gap:24px}
+@media(max-width:1000px){.grid3{grid-template-columns:1fr}}
+
+/* Cards */
+.card{background:white;border:1px solid var(--paper3);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.card-head h3{font-family:'Noto Serif SC',serif;font-size:14px;font-weight:600}
+.card-head .label{font-size:10px;padding:2px 8px;border-radius:3px;background:var(--paper2);color:var(--ink3);letter-spacing:.5px}
+.card-head .label.warm{background:var(--warm-d);color:var(--warm2)}
+
+/* Upload */
+.upload{border:1.5px dashed var(--paper3);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload:hover{border-color:var(--warm2);background:var(--warm-d)}
+.upload .icon{font-size:28px;color:var(--ink4);margin-bottom:6px}
+.upload p{font-size:12px;color:var(--ink3)}
+.upload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-img{max-width:100%;max-height:180px;border-radius:var(--r);margin-top:12px}
+
+/* AI Analysis */
+.analysis{margin-top:14px}
+.analysis .row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--paper2);font-size:12px}
+.analysis .row:last-child{border:none}
+.analysis .k{color:var(--ink3);width:48px;flex-shrink:0}
+.analysis .v{color:var(--ink2)}
+
+/* DNA bars */
+.dna-item{margin-bottom:10px}
+.dna-item .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.dna-item .name{font-size:12px;color:var(--ink2)}
+.dna-item .val{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.dna-bar{height:4px;background:var(--paper2);border-radius:2px;overflow:hidden}
+.dna-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* Craft cards */
+.craft-list{display:flex;flex-direction:column;gap:8px}
+.craft-item{display:flex;gap:12px;padding:10px;border:1px solid var(--paper3);border-radius:var(--r);cursor:pointer;transition:all .2s;background:white}
+.craft-item:hover{border-color:var(--warm2);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.craft-item.selected{border-color:var(--warm2);background:var(--warm-d)}
+.craft-item img{width:52px;height:52px;border-radius:4px;object-fit:cover}
+.craft-item .ci-body{flex:1;min-width:0}
+.craft-item .ci-name{font-size:13px;font-weight:600}
+.craft-item .ci-meta{font-size:10px;color:var(--ink3);margin-top:1px}
+.craft-item .ci-score{font-size:11px;color:var(--warm2);font-weight:600;margin-top:2px}
+
+/* Canvas */
+.canvas{background:white;border:1px solid var(--paper3);border-radius:var(--r);min-height:420px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.canvas img{max-width:100%;max-height:520px}
+.canvas .ph{text-align:center;color:var(--ink4)}
+.canvas .ph .big{font-family:'Noto Serif SC',serif;font-size:40px;font-weight:700;color:var(--paper3);margin-bottom:8px}
+.canvas .ph p{font-size:13px;line-height:1.8}
+
+/* Modes */
+.modes{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.mode{padding:8px 16px;border:1px solid var(--paper3);border-radius:var(--r);cursor:pointer;transition:all .2s;font-size:12px;background:white}
+.mode:hover{border-color:var(--warm2)}
+.mode.on{border-color:var(--warm2);background:var(--warm-d);color:var(--warm2);font-weight:500}
+.mode .mn{font-weight:600;font-size:13px}
+.mode .md{font-size:10px;color:var(--ink3);margin-top:1px}
+
+/* Generate button */
+.gen{width:100%;padding:14px;border:1px solid var(--ink);border-radius:var(--r);background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:1px;margin-top:12px}
+.gen:hover{background:var(--ink2)}
+.gen.loading{opacity:.5;pointer-events:none}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--paper3);border-top-color:var(--paper);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Trend cards */
+.trend-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--paper2);font-size:12px}
+.trend-item:last-child{border:none}
+.trend-item .score{font-size:18px;font-weight:700;color:var(--ink);width:36px;text-align:center}
+.trend-item .tinfo{flex:1}
+.trend-item .tname{font-weight:600;font-size:13px}
+.trend-item .tmeta{font-size:10px;color:var(--ink3);margin-top:1px}
+.trend-item .lc{font-size:9px;padding:2px 8px;border-radius:10px;font-weight:500}
+.lc-em{background:rgba(44,74,110,.1);color:var(--indigo)}
+.lc-gr{background:rgba(74,122,90,.1);color:var(--green)}
+.lc-ma{background:rgba(212,165,116,.15);color:var(--warm2)}
+
+/* Palette */
+.palette{display:flex;gap:5px;flex-wrap:wrap}
+.swatch{width:28px;height:28px;border-radius:4px;border:1px solid var(--paper3);cursor:default}
+.swatch:hover{transform:scale(1.15)}
+
+/* History */
+.hist{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--paper2)}
+.hist:last-child{border:none}
+.hist img{width:56px;height:56px;border-radius:4px;object-fit:cover}
+.hist .hinfo{flex:1}
+.hist .hmode{font-size:12px;font-weight:600}
+.hist .htime{font-size:10px;color:var(--ink3)}
+
+/* ICH Library full */
+.ich-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.ich-card{background:white;border:1px solid var(--paper3);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:all .2s}
+.ich-card:hover{border-color:var(--warm2);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+.ich-card img{width:100%;height:160px;object-fit:cover}
+.ich-card .body{padding:14px}
+.ich-card .title{font-family:'Noto Serif SC',serif;font-size:14px;font-weight:600;margin-bottom:4px}
+.ich-card .meta{font-size:11px;color:var(--ink3);margin-bottom:8px}
+.ich-card .desc{font-size:12px;color:var(--ink2);line-height:1.7}
+.ich-card .traits{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.ich-card .trait{font-size:10px;padding:2px 8px;border-radius:3px;background:var(--paper2);color:var(--ink3)}
+
+/* Progress */
+.prog{margin-top:8px;display:none}.prog.on{display:block}
+.prog-bar{height:2px;background:var(--paper3);border-radius:1px;overflow:hidden}
+.prog-fill{height:100%;background:var(--warm2);border-radius:1px;width:0;transition:width .3s}
+.prog-text{font-size:11px;color:var(--ink3);margin-top:4px}
+
+/* Responsive */
+@media(max-width:800px){
+  .wrap{padding:0 16px}
+  .grid3{grid-template-columns:1fr}
+  .ich-grid{grid-template-columns:1fr 1fr}
+  header .inner{flex-direction:column;gap:8px;align-items:flex-start}
+}
+
+/* Enhanced hover effects & transitions */
+html{scroll-behavior:smooth}
+.card{transition:all .3s cubic-bezier(.16,1,.3,1)}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.08);border-color:rgba(212,165,116,.3)}
+.upload{transition:all .25s}
+.upload:hover{border-color:#b8875a;background:rgba(212,165,116,.05)}
+.card-head .label{transition:all .2s}
+.card-head .label:hover{background:rgba(212,165,116,.15)}
+button{transition:all .2s}
+.ich-card{transition:all .3s cubic-bezier(.16,1,.3,1)}
+.ich-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08);border-color:rgba(212,165,116,.3)}
+</style>
+</head>
+<body>
+
+<!-- 统一导航条 -->
+<div id="wm-nav" style="position:sticky;top:0;z-index:999;background:rgba(44,36,20,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(245,240,232,.08);padding:0 24px">
+  <div style="max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:52px">
+    <a href="/" style="text-decoration:none;display:flex;align-items:baseline;gap:8px">
+      <span style="font-family:'Noto Serif SC',serif;font-size:14px;font-weight:700;color:#f5f0e8;letter-spacing:.1em">织觉引擎 WeaveMind</span>
+    </a>
+    <div style="display:flex;gap:6px">
+      <a href="/translator" style="padding:6px 14px;font-size:11px;color:#f5f0e8;background:rgba(245,240,232,.1);border-radius:3px;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;letter-spacing:.04em">审美翻译</a>
+      <a href="/spatial" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">空间感知</a>
+      <a href="/trend" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">趋势先知</a>
+      <a href="/gene" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">基因编辑</a>
+      <a href="/c2m.html" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">C2M体验</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="inner">
+      <div class="brand">
+        <h1>Aesthetic<em>Translator</em></h1>
+        <span class="sep">/</span>
+        <span class="sub">织觉翻译器 &middot; 非遗家纺创新</span>
+      </div>
+      <div class="header-r">
+        <span class="pill" id="st">就绪</span>
+      </div>
+    </div>
+  </header>
+
+  <nav id="nav">
+    <a class="on" data-s="lab">翻译工作台</a>
+    <a data-s="ich">非遗工艺库</a>
+    <a data-s="history">创作记录</a>
+  </nav>
+
+  <!-- Lab -->
+  <div class="sec on" id="sec-lab">
+    <div class="grid3">
+      <!-- Left -->
+      <div>
+        <div class="card">
+          <div class="card-head"><h3>灵感输入</h3><span class="label">拍照即设计</span></div>
+          <div class="upload" id="upload">
+            <div class="icon">+</div>
+            <p>上传灵感图片</p>
+            <p style="font-size:10px;margin-top:2px;color:var(--ink4)">万物皆可翻译为面料</p>
+            <input type="file" id="file-input" accept="image/*">
+          </div>
+          <div id="upload-pv" style="text-align:center;margin-top:10px;display:none">
+            <img id="pv-img" class="upload-img">
+          </div>
+        </div>
+
+        <div class="card" id="card-analysis" style="display:none">
+          <div class="card-head"><h3>审美解码</h3><span class="label warm">AI + CV</span></div>
+          <div class="analysis" id="analysis"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>审美DNA</h3><span class="label">8维特征</span></div>
+          <div id="dna-box"><p style="font-size:12px;color:var(--ink4)">上传图片后自动提取</p></div>
+        </div>
+      </div>
+
+      <!-- Center -->
+      <div>
+        <div class="modes" id="modes"></div>
+        <div class="canvas" id="canvas">
+          <div class="ph">
+            <div class="big">AT</div>
+            <p>上传灵感图片，解码审美基因</p>
+            <p>选择翻译模式，生成家纺花型</p>
+            <p style="margin-top:12px;font-size:11px;color:var(--ink4)">支持与非遗工艺深度融合</p>
+          </div>
+        </div>
+        <div class="prog" id="prog">
+          <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+          <div class="prog-text" id="prog-text">正在翻译审美基因...</div>
+        </div>
+        <button class="gen" id="btn-gen">TRANSLATE &mdash; 翻译生成</button>
+      </div>
+
+      <!-- Right -->
+      <div>
+        <div class="card" id="card-craft" style="display:none">
+          <div class="card-head"><h3>推荐工艺</h3><span class="label warm">智能匹配</span></div>
+          <div class="craft-list" id="craft-rec"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>趋势校验</h3><span class="label">Module 3</span></div>
+          <div id="trend-box"><p style="font-size:12px;color:var(--ink4)">翻译后自动校验市场趋势</p></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>提取配色</h3></div>
+          <div class="palette" id="palette"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>最近作品</h3></div>
+          <div id="recent"><p style="font-size:12px;color:var(--ink4)">暂无</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ICH Library -->
+  <div class="sec" id="sec-ich">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700;margin-bottom:6px">非遗工艺库</h2>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.7">精选国家级、省级非物质文化遗产中的纺织工艺。每种工艺都蕴含独特的审美基因，可与现代设计深度融合。<br>点击工艺卡片，直接作为翻译输入源。</p>
+    </div>
+    <div class="ich-grid" id="ich-full"></div>
+  </div>
+
+  <!-- History -->
+  <div class="sec" id="sec-history">
+    <div class="card">
+      <div class="card-head"><h3>创作记录</h3><span class="label" id="hist-cnt">0</span></div>
+      <div id="full-history"><p style="font-size:12px;color:var(--ink4)">暂无历史</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var API='/translator';
+var currentDNA={},currentAnalysis=null,currentImage=null,selectedMode='faithful',selectedCraft='';
+var CRAFTS=[],MODES={};
+
+window.addEventListener('DOMContentLoaded',function(){
+  loadAll();setupNav();setupUpload();setupGen();
+});
+
+function loadAll(){
+  Promise.all([
+    fetch(API+'/api/crafts').then(function(r){return r.json()}),
+    fetch(API+'/api/modes').then(function(r){return r.json()})
+  ]).then(function(a){
+    CRAFTS=a[0].crafts||[];
+    MODES=a[1].modes||{};
+    renderCrafts();renderModes();loadRecent();
+  }).catch(function(e){console.error(e);});
+}
+
+function setupNav(){
+  var as=document.querySelectorAll('#nav a');
+  for(var i=0;i<as.length;i++){as[i].addEventListener('click',function(e){
+    e.preventDefault();
+    for(var j=0;j<as.length;j++)as[j].classList.remove('on');
+    this.classList.add('on');
+    var secs=document.querySelectorAll('.sec');
+    for(var j=0;j<secs.length;j++)secs[j].classList.remove('on');
+    var s=this.getAttribute('data-s');
+    document.getElementById('sec-'+s).classList.add('on');
+    if(s==='history')loadHistory();
+  });}
+}
+
+function renderCrafts(){
+  // ICH full page
+  var el=document.getElementById('ich-full'),h='';
+  for(var i=0;i<CRAFTS.length;i++){var c=CRAFTS[i];
+    h+='<div class="ich-card" data-cid="'+c.id+'">';
+    h+='<img src="'+c.image+'" alt="'+c.name+'">';
+    h+='<div class="body"><div class="title">'+c.name+' <span style="font-size:11px;color:var(--ink3);font-weight:400">'+c.name_en+'</span></div>';
+    h+='<div class="meta">'+c.level+' &middot; '+c.origin+' &middot; '+c.era+'</div>';
+    h+='<div class="desc">'+c.desc+'</div>';
+    h+='<div class="traits"><span class="trait">'+c.level+'</span><span class="trait">'+c.craft_traits+'</span></div>';
+    h+='<div style="margin-top:10px;font-size:11px;color:var(--warm2);font-style:italic">融合方向：'+c.modern_fusion+'</div>';
+    h+='</div></div>';}
+  el.innerHTML=h;
+  var cards=el.querySelectorAll('.ich-card');
+  for(var i=0;i<cards.length;i++){cards[i].addEventListener('click',function(){
+    var cid=this.getAttribute('data-cid');
+    selectCraftFromLibrary(cid);
+  });}
+}
+
+function selectCraftFromLibrary(cid){
+  var as=document.querySelectorAll('#nav a');
+  for(var j=0;j<as.length;j++){as[j].classList.remove('on');if(as[j].getAttribute('data-s')==='lab')as[j].classList.add('on');}
+  var secs=document.querySelectorAll('.sec');
+  for(var j=0;j<secs.length;j++)secs[j].classList.remove('on');
+  document.getElementById('sec-lab').classList.add('on');
+  selectedCraft=cid;
+  selectedMode='fusion';
+
+  // 更新mode按钮
+  var mbs=document.querySelectorAll('.mode');
+  for(var j=0;j<mbs.length;j++){
+    mbs[j].classList.remove('on');
+    if(mbs[j].getAttribute('data-m')==='fusion')mbs[j].classList.add('on');
+  }
+
+  // 更新craft列表
+  var cis=document.querySelectorAll('.craft-item');
+  for(var j=0;j<cis.length;j++){cis[j].classList.remove('selected');if(cis[j].getAttribute('data-cid')===cid)cis[j].classList.add('selected');}
+
+  var craft=CRAFTS.find(function(c){return c.id===cid});
+  if(!craft)return;
+
+  // 如果没上传过图片，用工艺图片作为预览
+  if(!currentImage){
+    document.getElementById('pv-img').src=craft.image;
+    document.getElementById('upload-pv').style.display='block';
+    currentImage=craft.image;
+  }
+
+  // DNA融合：已上传图片的DNA与工艺DNA混合
+  var hasUpload=Object.keys(currentDNA).length>0;
+  if(hasUpload){
+    var blended={};
+    var keys=['color_warmth','saturation','pattern_complex','texture_feel','style_modern','material_weight','luminosity','organic_ratio'];
+    for(var i=0;i<keys.length;i++){
+      var k=keys[i];
+      var userVal=currentDNA[k]||50;
+      var craftVal=craft.dna[k]||50;
+      blended[k]=Math.round(userVal*0.55+craftVal*0.45);
+    }
+    currentDNA=blended;
+  }else{
+    currentDNA=JSON.parse(JSON.stringify(craft.dna));
+  }
+  renderDNA(currentDNA);
+
+  // 显示工艺+分析信息
+  document.getElementById('card-analysis').style.display='block';
+  var h='<div class="row"><span class="k">工艺</span><span class="v">'+craft.name+'</span></div>'+
+    '<div class="row"><span class="k">特点</span><span class="v">'+craft.craft_traits+'</span></div>'+
+    '<div class="row"><span class="k">描述</span><span class="v">'+craft.desc+'</span></div>'+
+    '<div class="row"><span class="k">融合</span><span class="v" style="color:var(--warm2)">'+craft.modern_fusion+'</span></div>';
+  if(hasUpload)h+='<div class="row"><span class="k" style="color:var(--indigo)">DNA</span><span class="v" style="color:var(--indigo)">已融合原图基因(55%) + 工艺基因(45%)</span></div>';
+  document.getElementById('analysis').innerHTML=h;
+}
+
+function renderModes(){
+  var el=document.getElementById('modes'),h='';
+  for(var k in MODES){var m=MODES[k];
+    h+='<div class="mode'+(k==='faithful'?' on':'')+'" data-m="'+k+'"><div class="mn">'+m.name+'</div><div class="md">'+m.desc+'</div></div>';}
+  el.innerHTML=h;
+  var btns=el.querySelectorAll('.mode');
+  for(var i=0;i<btns.length;i++){btns[i].addEventListener('click',function(){
+    for(var j=0;j<btns.length;j++)btns[j].classList.remove('on');
+    this.classList.add('on');selectedMode=this.getAttribute('data-m');
+  });}
+}
+
+function setupUpload(){
+  var zone=document.getElementById('upload'),inp=document.getElementById('file-input');
+  zone.addEventListener('dragover',function(e){e.preventDefault();zone.style.borderColor='var(--warm2)'});
+  zone.addEventListener('dragleave',function(){zone.style.borderColor=''});
+  zone.addEventListener('drop',function(e){e.preventDefault();zone.style.borderColor='';if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])});
+  inp.addEventListener('change',function(){if(inp.files.length)handleFile(inp.files[0])});
+}
+
+function handleFile(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('pv-img').src=e.target.result;
+    document.getElementById('upload-pv').style.display='block';
+    currentImage=e.target.result;
+    doAnalyze(file);
+  };
+  reader.readAsDataURL(file);
+}
+
+function doAnalyze(file){
+  document.getElementById('st').textContent='解码中...';
+  var fd=new FormData();fd.append('image',file);
+  fetch(API+'/api/analyze',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
+    document.getElementById('st').textContent='就绪';
+    if(d.aesthetic_dna){currentDNA=d.aesthetic_dna;renderDNA(d.aesthetic_dna);renderPalette(d.cv_features);}
+    if(d.ai_analysis){currentAnalysis=d.ai_analysis;renderAnalysis(d.ai_analysis);}
+    if(d.craft_recommendations){renderCraftRec(d.craft_recommendations);}
+  }).catch(function(){document.getElementById('st').textContent='就绪';});
+}
+
+function renderAnalysis(ai){
+  document.getElementById('card-analysis').style.display='block';
+  var h='';
+  if(ai.subject)h+='<div class="row"><span class="k">主体</span><span class="v">'+ai.subject+'</span></div>';
+  if(ai.mood)h+='<div class="row"><span class="k">氛围</span><span class="v">'+ai.mood+'</span></div>';
+  if(ai.style)h+='<div class="row"><span class="k">风格</span><span class="v">'+ai.style+'</span></div>';
+  if(ai.color_desc)h+='<div class="row"><span class="k">色彩</span><span class="v">'+ai.color_desc+'</span></div>';
+  if(ai.pattern_type)h+='<div class="row"><span class="k">图案</span><span class="v">'+ai.pattern_type+'</span></div>';
+  if(ai.ich_suggestion)h+='<div class="row"><span class="k" style="color:var(--warm2)">非遗</span><span class="v" style="color:var(--warm2)">'+ai.ich_suggestion+'</span></div>';
+  document.getElementById('analysis').innerHTML=h;
+}
+
+function renderDNA(dna){
+  var dims=[
+    {key:'color_warmth',name:'色彩温度',a:'冷调',b:'暖调',c:'var(--indigo)'},
+    {key:'saturation',name:'饱和度',a:'素雅',b:'艳丽',c:'var(--warm2)'},
+    {key:'pattern_complex',name:'图案复杂度',a:'极简',b:'繁复',c:'var(--ink)'},
+    {key:'texture_feel',name:'织物肌理',a:'光滑',b:'粗糙',c:'var(--warm)'},
+    {key:'style_modern',name:'风格倾向',a:'传统',b:'现代',c:'var(--indigo)'},
+    {key:'material_weight',name:'材质厚薄',a:'轻薄',b:'厚重',c:'var(--ink2)'},
+    {key:'luminosity',name:'光泽度',a:'哑光',b:'高光',c:'var(--warm2)'},
+    {key:'organic_ratio',name:'自然感',a:'人工',b:'天然',c:'var(--green)'}
+  ];
+  var el=document.getElementById('dna-box'),h='';
+  for(var i=0;i<dims.length;i++){var d=dims[i],v=dna[d.key]||50;
+    h+='<div class="dna-item"><div class="top"><span class="name">'+d.name+'</span><span class="val">'+v+'</span></div>';
+    h+='<div class="dna-bar"><div class="dna-fill" style="width:'+v+'%;background:'+d.c+'"></div></div></div>';}
+  el.innerHTML=h;
+}
+
+function renderCraftRec(recs){
+  document.getElementById('card-craft').style.display='block';
+  var el=document.getElementById('craft-rec'),h='';
+  for(var i=0;i<recs.length&&i<3;i++){var r=recs[i],craft=CRAFTS.find(function(c){return c.id===r.craft_id});
+    if(!craft)continue;
+    h+='<div class="craft-item" data-cid="'+r.craft_id+'">';
+    h+='<img src="'+craft.image+'" alt="'+craft.name+'">';
+    h+='<div class="ci-body"><div class="ci-name">'+craft.name+'</div><div class="ci-meta">'+craft.level+'</div>';
+    h+='<div class="ci-score">匹配度 '+r.match_score+'%</div></div></div>';}
+  el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">无匹配</p>';
+  var items=el.querySelectorAll('.craft-item');
+  for(var i=0;i<items.length;i++){items[i].addEventListener('click',function(){
+    for(var j=0;j<items.length;j++)items[j].classList.remove('selected');
+    this.classList.add('selected');
+    selectedCraft=this.getAttribute('data-cid');
+    selectedMode='fusion';
+    var mbs=document.querySelectorAll('.mode');
+    for(var j=0;j<mbs.length;j++){mbs[j].classList.remove('on');if(mbs[j].getAttribute('data-m')==='fusion')mbs[j].classList.add('on');}
+  });}
+}
+
+function renderPalette(features){
+  var el=document.getElementById('palette'),h='';
+  var colors=features&&features.color?features.color.dominant_colors:[];
+  for(var i=0;i<colors.length;i++)h+='<div class="swatch" style="background:'+colors[i].hex+'" title="'+colors[i].hex+'"></div>';
+  el.innerHTML=h||'<span style="font-size:11px;color:var(--ink4)">—</span>';
+}
+
+function setupGen(){document.getElementById('btn-gen').addEventListener('click',doTranslate);}
+
+function doTranslate(){
+  var btn=document.getElementById('btn-gen'),prog=document.getElementById('prog');
+  btn.classList.add('loading');btn.innerHTML='<span class="spinner"></span>翻译中...';
+  prog.classList.add('on');document.getElementById('prog-fill').style.width='0';
+  document.getElementById('st').textContent='翻译中...';
+  var prompt='';
+  if(currentAnalysis&&currentAnalysis.textile_prompt){
+    prompt=currentAnalysis.textile_prompt;
+  }else if(selectedCraft){
+    var craft=CRAFTS.find(function(c){return c.id===selectedCraft});
+    prompt=craft?craft.prompt_core:'high quality textile curtain fabric design';
+  }else{
+    prompt='high quality textile curtain fabric design';
+  }
+  fetch(API+'/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({mode:selectedMode,base_prompt:prompt,dna:currentDNA,craft_id:selectedCraft})
+  }).then(function(r){return r.json()}).then(function(d){
+    btn.classList.remove('loading');btn.innerHTML='TRANSLATE &mdash; 翻译生成';
+    prog.classList.remove('on');document.getElementById('st').textContent='就绪';
+    if(d.success){
+      var canvas=document.getElementById('canvas');
+      canvas.innerHTML='<img src="'+d.image_url+'">';
+      if(d.note)canvas.innerHTML+='<div style="padding:12px;font-size:11px;color:var(--ink3);text-align:center;font-style:italic">'+d.note+'</div>';
+      doTrendValidate();loadRecent();
+    }else alert('失败: '+d.error);
+  }).catch(function(e){
+    btn.classList.remove('loading');btn.innerHTML='TRANSLATE &mdash; 翻译生成';
+    prog.classList.remove('on');document.getElementById('st').textContent='就绪';alert('请求失败');
+  });
+}
+
+function doTrendValidate(){
+  fetch(API+'/api/trend_validate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({})
+  }).then(function(r){return r.json()}).then(function(d){
+    var el=document.getElementById('trend-box'),h='',m=d.matches||[];
+    if(!m.length){el.innerHTML='<p style="font-size:12px;color:var(--ink4)">趋势引擎未连接</p>';return;}
+    for(var i=0;i<m.length;i++){
+      var cls=m[i].lifecycle==='emerging'?'lc-em':m[i].lifecycle==='growth'?'lc-gr':'lc-ma';
+      var lc=m[i].lifecycle==='emerging'?'萌芽':m[i].lifecycle==='growth'?'增长':'成熟';
+      h+='<div class="trend-item"><div class="score">'+m[i].trend_score+'</div><div class="tinfo"><div class="tname">'+m[i].trend_name+'</div><div class="tmeta">匹配 '+m[i].confidence+'%</div></div><span class="lc '+cls+'">'+lc+'</span></div>';}
+    el.innerHTML=h;
+  });
+}
+
+function loadRecent(){
+  fetch(API+'/api/history').then(function(r){return r.json()}).then(function(d){
+    var list=d.history||[],el=document.getElementById('recent'),h='';
+    for(var i=0;i<list.length&&i<5;i++){
+      h+='<div class="hist"><img src="'+list[i].img_url+'" alt=""><div class="hinfo"><div class="hmode">'+(list[i].craft_name||list[i].mode||'')+'</div><div class="htime">'+(list[i].created_at||'').slice(0,16)+'</div></div></div>';}
+    el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">暂无</p>';
+  });
+}
+
+function loadHistory(){
+  fetch(API+'/api/history').then(function(r){return r.json()}).then(function(d){
+    var list=d.history||[];
+    document.getElementById('hist-cnt').textContent=list.length+' 件';
+    var el=document.getElementById('full-history'),h='';
+    for(var i=0;i<list.length;i++){
+      h+='<div class="hist"><img src="'+list[i].img_url+'" alt="" style="width:70px;height:70px"><div class="hinfo"><div class="hmode">'+(list[i].craft_name||list[i].mode||'')+'</div><div class="htime">'+(list[i].created_at||'').slice(0,16)+'</div></div></div>';}
+    el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">暂无</p>';
+  });
+}
+</script>
+</body>
+</html>
