@@ -200,7 +200,6 @@ html{scroll-behavior:smooth}
 <div class="ttip" id="ttip"></div>
 <script>
 var API='/trend';
-var TD=[],RD={},RC=[],PD=[],ND=[];
 var DIM={social:'社交',fashion:'时尚',culture:'文化',economic:'经济',search:'搜索',design:'设计'};
 var LC={emerging:'萌芽',growth:'增长',mature:'成熟',declining:'衰退'};
 var LCC={emerging:'em',growth:'gr',mature:'ma',declining:'de'};
@@ -208,19 +207,58 @@ var NAV=[{id:'overview',label:'趋势总览'},{id:'radar',label:'信号雷达'},
 
 function sc(v){return v>=80?'var(--green)':v>=60?'var(--accent)':'var(--orange)'}
 
+// 内嵌数据（静态展示用）
+var TD=[
+  {id:'wabi_sabi',name:'侘寂美学',name_en:'Wabi-Sabi Textiles',category:'风格趋势',score:87,velocity:2.3,lifecycle:'growth',peak_month:'2027-03',resonance_score:84,color_palette:['#d4c5a9','#8b7d6b','#a0926e','#c8bfa0','#6b5b4a'],signals:{social:92,fashion:85,culture:78,economic:70,search:88,design:90}},
+  {id:'dopamine_home',name:'多巴胺家居',name_en:'Dopamine Decor',category:'色彩趋势',score:79,velocity:3.1,lifecycle:'growth',peak_month:'2027-01',resonance_score:78,color_palette:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bd6'],signals:{social:85,fashion:90,culture:72,economic:65,search:78,design:75}},
+  {id:'quiet_luxury',name:'静奢风',name_en:'Quiet Luxury',category:'品质趋势',score:82,velocity:1.8,lifecycle:'growth',peak_month:'2027-06',resonance_score:79,color_palette:['#f5f0e8','#d4c9b8','#8a7f72','#2c2825','#c5b9a8'],signals:{social:75,fashion:92,culture:68,economic:85,search:72,design:80}},
+  {id:'digital_garden',name:'数字花园',name_en:'Digital Garden',category:'图案趋势',score:74,velocity:4.2,lifecycle:'emerging',peak_month:'2027-09',resonance_score:71,color_palette:['#7b68ee','#00ced1','#ff69b4','#98fb98','#dda0dd'],signals:{social:68,fashion:65,culture:82,economic:55,search:60,design:95}},
+  {id:'eco_revolution',name:'可持续革新',name_en:'Eco-Revolution',category:'材料趋势',score:80,velocity:2.0,lifecycle:'growth',peak_month:'2027-12',resonance_score:75,color_palette:['#228b22','#8fbc8f','#f0e68c','#deb887','#556b2f'],signals:{social:72,fashion:78,culture:85,economic:60,search:75,design:82}},
+  {id:'neon_chinese',name:'新赛博中式',name_en:'Neo-Cyber Chinese',category:'风格趋势',score:71,velocity:3.8,lifecycle:'emerging',peak_month:'2027-06',resonance_score:70,color_palette:['#ff0040','#00ff88','#ffd700','#1a1a2e','#c0c0c0'],signals:{social:78,fashion:62,culture:88,economic:55,search:65,design:72}},
+  {id:'soft_minimalism',name:'温柔极简',name_en:'Soft Minimalism',category:'风格趋势',score:85,velocity:1.5,lifecycle:'mature',peak_month:'2026-12',resonance_score:77,color_palette:['#f5f0e8','#e8ddd0','#d4c9b8','#c5b9a8','#b8a99a'],signals:{social:88,fashion:72,culture:65,economic:75,search:90,design:70}},
+  {id:'maximalist_pattern',name:'极繁主义复兴',name_en:'Maximalist Revival',category:'图案趋势',score:65,velocity:2.5,lifecycle:'emerging',peak_month:'2027-09',resonance_score:63,color_palette:['#8b0000','#006400','#191970','#daa520','#800080'],signals:{social:55,fashion:75,culture:70,economic:50,search:52,design:78}}
+];
+var RD={social:{name:'社交热度',avg_score:77.9,max_score:92,max_trend:'侘寂美学'},fashion:{name:'时尚上游',avg_score:79.9,max_score:92,max_trend:'静奢风'},culture:{name:'文化事件',avg_score:77.0,max_score:88,max_trend:'新赛博中式'},economic:{name:'经济情绪',avg_score:64.4,max_score:85,max_trend:'静奢风'},search:{name:'搜索趋势',avg_score:74.8,max_score:90,max_trend:'温柔极简'},design:{name:'设计社区',avg_score:78.3,max_score:95,max_trend:'数字花园'}};
+var RC=[
+  {trend_a:'侘寂美学',trend_b:'温柔极简',resonance:0.92},{trend_a:'侘寂美学',trend_b:'静奢风',resonance:0.87},{trend_a:'静奢风',trend_b:'温柔极简',resonance:0.85},
+  {trend_a:'多巴胺家居',trend_b:'数字花园',resonance:0.80},{trend_a:'侘寂美学',trend_b:'可持续革新',resonance:0.78},{trend_a:'静奢风',trend_b:'可持续革新',resonance:0.76},
+  {trend_a:'新赛博中式',trend_b:'数字花园',resonance:0.73},{trend_a:'多巴胺家居',trend_b:'新赛博中式',resonance:0.71},{trend_a:'温柔极简',trend_b:'可持续革新',resonance:0.69}
+];
+var PD=[
+  {id:'wabi_sabi',name:'侘寂美学',current_score:87,predicted_score:94,velocity:2.3,lifecycle:'growth',confidence:89,recommendation:'推荐开发原色亚麻窗帘系列'},
+  {id:'soft_minimalism',name:'温柔极简',current_score:85,predicted_score:86,velocity:1.5,lifecycle:'mature',confidence:82,recommendation:'开发奶油色纯色棉麻系列'},
+  {id:'quiet_luxury',name:'静奢风',current_score:82,predicted_score:87,velocity:1.8,lifecycle:'growth',confidence:84,recommendation:'开发高支数纯色棉麻系列'},
+  {id:'eco_revolution',name:'可持续革新',current_score:80,predicted_score:88,velocity:2.0,lifecycle:'growth',confidence:80,recommendation:'开发竹纤维窗帘和有机棉床品线'},
+  {id:'dopamine_home',name:'多巴胺家居',current_score:79,predicted_score:91,velocity:3.1,lifecycle:'growth',confidence:83,recommendation:'开发彩色拼接窗帘和渐变色床品系列'},
+  {id:'digital_garden',name:'数字花园',current_score:74,predicted_score:95,velocity:4.2,lifecycle:'emerging',confidence:76,recommendation:'结合AI花型生成能力开发限量版'},
+  {id:'neon_chinese',name:'新赛博中式',current_score:71,predicted_score:91,velocity:3.8,lifecycle:'emerging',confidence:75,recommendation:'开发金属光泽提花窗帘'},
+  {id:'maximalist_pattern',name:'极繁主义复兴',current_score:65,predicted_score:83,velocity:2.5,lifecycle:'emerging',confidence:68,recommendation:'开发大马士革纹提花窗帘'}
+];
+var ND=[
+  {title:'米兰设计周：自然材质成最大赢家',source:'设计在线',date:'2026-09-15',trend:'wabi_sabi',impact:'high'},
+  {title:'小红书奶油风搜索量月增35%',source:'电商报',date:'2026-09-12',trend:'soft_minimalism',impact:'high'},
+  {title:'可持续纺织品市场规模突破500亿',source:'产业经济',date:'2026-09-10',trend:'eco_revolution',impact:'medium'},
+  {title:'AI生成花型在家纺领域应用激增',source:'科技日报',date:'2026-09-08',trend:'digital_garden',impact:'high'},
+  {title:'Z世代国潮消费同比增长42%',source:'消费报告',date:'2026-09-05',trend:'neon_chinese',impact:'medium'},
+  {title:'巴黎时装周：极繁主义强势回归',source:'Vogue',date:'2026-09-02',trend:'maximalist_pattern',impact:'high'},
+  {title:'高端酒店家纺采购偏好转向静奢风',source:'酒店业',date:'2026-08-28',trend:'quiet_luxury',impact:'medium'},
+  {title:'多巴胺色彩在家居领域搜索量翻倍',source:'Pinterest',date:'2026-08-25',trend:'dopamine_home',impact:'high'}
+];
+var TL_DATA={
+  wabi_sabi:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[45,48,52,55,58,62,65,68,72,76,80,84,87,90,92,94]},
+  dopamine_home:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[30,35,40,48,55,60,65,68,72,75,78,80,82,83,84,85]},
+  quiet_luxury:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[50,52,55,57,60,63,65,68,70,73,75,77,79,81,83,85]},
+  digital_garden:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[15,18,22,28,35,40,45,50,55,58,62,65,68,71,73,75]},
+  eco_revolution:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[40,42,45,48,52,55,58,62,65,68,72,75,78,80,82,84]},
+  neon_chinese:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[20,25,30,35,42,48,52,56,60,63,66,68,70,72,73,74]},
+  soft_minimalism:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[60,62,65,68,70,72,75,78,80,82,83,84,85,85,86,86]},
+  maximalist_pattern:{months:['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09'],data:[30,32,35,38,40,43,46,48,52,55,58,60,62,63,64,65]}
+};
+
 window.addEventListener('DOMContentLoaded',function(){
   document.getElementById('date').textContent=new Date().toLocaleDateString('zh-CN');
   renderNav();
-  Promise.all([
-    fetch(API+'/api/trends').then(function(r){return r.json()}),
-    fetch(API+'/api/radar').then(function(r){return r.json()}),
-    fetch(API+'/api/resonance').then(function(r){return r.json()}),
-    fetch(API+'/api/predictions').then(function(r){return r.json()}),
-    fetch(API+'/api/news').then(function(r){return r.json()})
-  ]).then(function(a){
-    TD=a[0].trends||[];RD=a[1].radar||{};RC=a[2].matrix||[];PD=a[3].predictions||[];ND=a[4].news||[];
-    renderStats();renderOverview();
-  }).catch(function(e){console.error('Load failed:',e)});
+  renderStats();renderOverview();
 });
 
 function renderNav(){
@@ -281,13 +319,13 @@ function renderOverview(){
   var cards=el.querySelectorAll('.tc');
   for(var i=0;i<cards.length;i++){
     cards[i].addEventListener('click',function(){
-      var self=this;
-      fetch(API+'/api/trends/'+this.getAttribute('data-id')).then(function(r){return r.json()}).then(function(d){
-        var tt=document.getElementById('ttip'),r=self.getBoundingClientRect();
-        tt.innerHTML='<div class="tn">'+d.name+' ('+d.name_en+')</div><div class="td">'+d.description+'</div><div class="tr">'+d.recommendation+'</div>';
-        tt.style.display='block';tt.style.left=Math.min(r.right+10,window.innerWidth-320)+'px';tt.style.top=r.top+'px';
-        setTimeout(function(){tt.style.display='none'},5000);
-      });
+      var self=this,tid=this.getAttribute('data-id');
+      var d=null;for(var k=0;k<TD.length;k++)if(TD[k].id===tid)d=TD[k];
+      if(!d)return;
+      var tt=document.getElementById('ttip'),r=self.getBoundingClientRect();
+      tt.innerHTML='<div class="tn">'+d.name+' ('+d.name_en+')</div><div class="td">'+(d.category||'')+'</div><div class="tr">增速 '+d.velocity+'%/月 · 共振 '+d.resonance_score+'</div>';
+      tt.style.display='block';tt.style.left=Math.min(r.right+10,window.innerWidth-320)+'px';tt.style.top=r.top+'px';
+      setTimeout(function(){tt.style.display='none'},5000);
     });
   }
 }
@@ -308,14 +346,14 @@ function renderTimeline(){
   if(!TD.length||typeof echarts==='undefined')return;
   var ch=echarts.init(document.getElementById('tch'),'dark');
   var cols=['#c9a96e','#4ade80','#60a5fa','#f87171','#a78bfa','#fb923c','#22d3ee','#f472b6'];
-  var series=[],months=[],pending=0;
-  for(var i=0;i<TD.length&&i<8;i++){pending++;(function(idx){
-    fetch(API+'/api/timeline/'+TD[idx].id).then(function(r){return r.json()}).then(function(d){
-      if(idx===0)months=d.months||[];
-      series.push({name:d.name,type:'line',smooth:true,symbol:'circle',symbolSize:4,lineStyle:{width:2},itemStyle:{color:cols[idx%cols.length]},data:d.data||[]});
-      pending--;if(pending===0) drawTL(ch,months,series);
-    }).catch(function(){pending--;if(pending===0) drawTL(ch,months,series);});
-  })(i);}
+  var series=[],months=[];
+  for(var i=0;i<TD.length&&i<8;i++){
+    var d=TL_DATA[TD[i].id];
+    if(!d)continue;
+    if(i===0)months=d.months||[];
+    series.push({name:TD[i].name,type:'line',smooth:true,symbol:'circle',symbolSize:4,lineStyle:{width:2},itemStyle:{color:cols[i%cols.length]},data:d.data||[]});
+  }
+  drawTL(ch,months,series);
   var lc=echarts.init(document.getElementById('lch'),'dark');
   var ld=[{name:'萌芽期',value:0,itemStyle:{color:'#60a5fa'}},{name:'增长期',value:0,itemStyle:{color:'#4ade80'}},{name:'成熟期',value:0,itemStyle:{color:'#fb923c'}},{name:'衰退期',value:0,itemStyle:{color:'#f87171'}}];
   for(var i=0;i<TD.length;i++){if(TD[i].lifecycle==='emerging')ld[0].value++;else if(TD[i].lifecycle==='growth')ld[1].value++;else if(TD[i].lifecycle==='mature')ld[2].value++;else if(TD[i].lifecycle==='declining')ld[3].value++;}
