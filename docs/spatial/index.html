@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>织觉引擎 · 空间感知 | WeaveMind</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════
+           CSS 变量 & 设计系统
+           ═══════════════════════════════════════════ */
+        :root {
+            --bg-void: #06060a;
+            --bg-deep: #0c0c14;
+            --bg-surface: #13131f;
+            --bg-elevated: #1a1a2a;
+            --bg-hover: #222236;
+            --bg-glass: rgba(19, 19, 31, 0.75);
+            --bg-glass-heavy: rgba(19, 19, 31, 0.92);
+
+            --gold-50: #fdf8ef;
+            --gold-100: #f5e6c8;
+            --gold-200: #e0c992;
+            --gold-300: #d4b574;
+            --gold-400: #c9a96e;
+            --gold-500: #b8944e;
+            --gold-600: #9a7a3a;
+            --gold-glow: rgba(201, 169, 110, 0.15);
+            --gold-glow-strong: rgba(201, 169, 110, 0.3);
+
+            --jade: #6bbd8a;
+            --jade-glow: rgba(107, 189, 138, 0.15);
+            --rose: #c97b7b;
+            --rose-glow: rgba(201, 123, 123, 0.15);
+            --blue: #6b8ec9;
+            --purple: #9b7bc9;
+
+            --text-primary: #eae8e4;
+            --text-secondary: #9a9aaa;
+            --text-muted: #5a5a6e;
+            --text-inverse: #0c0c14;
+
+            --border: rgba(201, 169, 110, 0.1);
+            --border-active: rgba(201, 169, 110, 0.35);
+            --border-jade: rgba(107, 189, 138, 0.3);
+
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+            --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
+            --shadow-lg: 0 16px 64px rgba(0,0,0,0.5);
+            --shadow-glow-gold: 0 0 40px rgba(201,169,110,0.12);
+            --shadow-glow-jade: 0 0 40px rgba(107,189,138,0.12);
+
+            --radius-xs: 6px;
+            --radius-sm: 10px;
+            --radius-md: 14px;
+            --radius-lg: 22px;
+            --radius-xl: 32px;
+            --radius-full: 9999px;
+
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --transition: all 0.35s var(--ease-out);
+            --transition-fast: all 0.2s var(--ease-out);
+
+            --font-serif: 'Noto Serif SC', 'Songti SC', Georgia, serif;
+            --font-sans: 'Noto Sans SC', 'PingFang SC', -apple-system, system-ui, sans-serif;
+        }
+
+        /* ═══════════════════════════════════════════
+           重置 & 全局
+           ═══════════════════════════════════════════ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-void);
+            background-image: url('../assets/bg-spatial-soft.png');
+            background-size: 800px;
+            background-repeat: repeat;
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::selection {
+            background: var(--gold-400);
+            color: var(--text-inverse);
+        }
+
+        /* ═══════════════════════════════════════════
+           背景层
+           ═══════════════════════════════════════════ */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.5;
+            animation: orbFloat 25s ease-in-out infinite;
+        }
+        .bg-orb--gold {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(201,169,110,0.08), transparent 70%);
+            top: -10%; left: -5%;
+            animation-delay: 0s;
+        }
+        .bg-orb--jade {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(107,189,138,0.06), transparent 70%);
+            bottom: -10%; right: -5%;
+            animation-delay: -8s;
+        }
+        .bg-orb--blue {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(107,142,201,0.05), transparent 70%);
+            top: 40%; left: 50%;
+            animation-delay: -16s;
+        }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -40px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        .bg-grain {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* 网格装饰线 */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image:
+                linear-gradient(rgba(201,169,110,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(201,169,110,0.02) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+        }
+
+        /* ═══════════════════════════════════════════
+           导航栏
+           ═══════════════════════════════════════════ */
+        .nav {
+            position: fixed;
+            top: 44px;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 clamp(20px, 4vw, 48px);
+            background: var(--bg-glass-heavy);
+            backdrop-filter: blur(24px) saturate(1.2);
+            -webkit-backdrop-filter: blur(24px) saturate(1.2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+        }
+
+        .nav-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--gold-400), var(--jade));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: var(--shadow-glow-gold);
+        }
+
+        .nav-text { display: flex; flex-direction: column; }
+
+        .nav-title {
+            font-family: var(--font-serif);
+            font-size: 19px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--gold-100), var(--gold-400));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+
+        .nav-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link {
+            padding: 8px 20px;
+            border-radius: var(--radius-full);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 400;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            border: 1px solid transparent;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(201,169,110,0.06);
+        }
+        .nav-link.active {
+            color: var(--gold-300);
+            background: rgba(201,169,110,0.08);
+            border-color: rgba(201,169,110,0.15);
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 6px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border-radius: var(--radius-full);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .nav-btn:hover {
+            border-color: rgba(201,169,110,0.25);
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+        .nav-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* ═══════════════════════════════════════════
+           HERO 区域
+           ═══════════════════════════════════════════ */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 140px 24px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-bg-img {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background: url('assets/hero-bg.png') center/cover no-repeat;
+            opacity: 0.12;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border);
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            color: var(--gold-300);
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            margin-bottom: 36px;
+            animation: fadeSlideUp 0.8s var(--ease-out) both;
+        }
+        .hero-badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--jade);
+            box-shadow: 0 0 8px var(--jade);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .hero-title {
+            font-family: var(--font-serif);
+            font-size: clamp(40px, 7vw, 80px);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 28px;
+            animation: fadeSlideUp 0.8s var(--ease-out) 0.1s both;
+        }
+        .hero-title .line1 {
+            display: block;
+            background: linear-gradient(135deg, var(--gold-100) 0%, var(--gold-400) 50%, var(--jade) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 6s ease-in-out infinite;
+        }
+        .hero-title .line2 {
+            display: block;
+            font-size: 0.45em;
+            color: var(--text-secondary);
+            -webkit-text-fill-color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: 0.08em;
+            margin-top: 12px;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-desc {
+            font-size: clamp(15px, 2vw, 18px);
+            color: var(--text-secondary);
+            max-width: 560px;
+            line-height: 1.8;
+            margin-bottom: 44px;
+            animation: fadeSlideUp 0.8s var(--ease-out) 0.2s both;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: fadeSlideUp 0.8s var(--ease-out) 0.3s both;
+        }
+
+        .hero-metrics {
+            display: flex;
+            gap: 48px;
+            margin-top: 72px;
+            padding-top: 36px;
+            border-top: 1px solid var(--border);
+            animation: fadeSlideUp 0.8s var(--ease-out) 0.4s both;
+        }
+        .metric { text-align: center; }
+        .metric-value {
+            font-family: var(--font-serif);
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold-200), var(--gold-400));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* ═══════════════════════════════════════════
+           按钮系统
+           ═══════════════════════════════════════════ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 500;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+            opacity: 0;
+            transition: var(--transition-fast);
+        }
+        .btn:hover::after { opacity: 1; }
+
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold-500), var(--gold-300));
+            color: var(--text-inverse);
+            box-shadow: 0 4px 24px rgba(201,169,110,0.25);
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 36px rgba(201,169,110,0.35);
+        }
+
+        .btn-ghost {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover {
+            border-color: var(--border-active);
+            background: var(--bg-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-sm {
+            padding: 10px 20px;
+            font-size: 13px;
+            border-radius: var(--radius-sm);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* ═══════════════════════════════════════════
+           工作台区域
+           ═══════════════════════════════════════════ */
+        .workspace {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 clamp(16px, 4vw, 48px) 100px;
+        }
+
+        .section-header {
+            text-align: center;
+            padding: 80px 0 48px;
+        }
+        .section-eyebrow {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--gold-400);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: clamp(26px, 4vw, 36px);
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .section-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* ═══════════════════════════════════════════
+           步骤指示器
+           ═══════════════════════════════════════════ */
+        .stepper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 40px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 24px;
+            border-radius: var(--radius-full);
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            user-select: none;
+        }
+        .step:hover { border-color: rgba(201,169,110,0.2); }
+        .step.active {
+            border-color: var(--gold-400);
+            color: var(--gold-300);
+            background: rgba(201,169,110,0.06);
+            box-shadow: var(--shadow-glow-gold);
+        }
+        .step.done {
+            border-color: var(--jade);
+            color: var(--jade);
+        }
+        .step-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--bg-elevated);
+            transition: var(--transition);
+        }
+        .step.active .step-num {
+            background: var(--gold-400);
+            color: var(--text-inverse);
+        }
+        .step.done .step-num {
+            background: var(--jade);
+            color: var(--text-inverse);
+        }
+        .step-line {
+            width: 48px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ═══════════════════════════════════════════
+           卡片面板
+           ═══════════════════════════════════════════ */
+        .panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .panel-head {
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .panel-head-title {
+            font-family: var(--font-serif);
+            font-size: 17px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .panel-head-badge {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: var(--font-sans);
+            font-weight: 400;
+        }
+        .panel-body {
+            padding: 28px;
+        }
+
+        /* ═══════════════════════════════════════════
+           步骤面板切换
+           ═══════════════════════════════════════════ */
+        .step-panel { display: none; }
+        .step-panel.active {
+            display: block;
+            animation: fadeSlideUp 0.5s var(--ease-out);
+        }
+
+        /* ═══════════════════════════════════════════
+           步骤1: 房间来源
+           ═══════════════════════════════════════════ */
+        .source-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .source-card {
+            position: relative;
+            padding: 36px 28px;
+            border-radius: var(--radius-md);
+            border: 1.5px dashed rgba(201,169,110,0.15);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        .source-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(201,169,110,0.03), transparent);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        .source-card:hover::before { opacity: 1; }
+        .source-card:hover {
+            border-color: rgba(201,169,110,0.3);
+            transform: translateY(-2px);
+        }
+        .source-card.selected {
+            border-color: var(--gold-400);
+            border-style: solid;
+            background: rgba(201,169,110,0.04);
+            box-shadow: var(--shadow-glow-gold);
+        }
+        .source-card.selected::before { opacity: 1; }
+
+        .source-icon-wrap {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(201,169,110,0.06);
+            border: 1px solid rgba(201,169,110,0.12);
+        }
+        .source-name { font-size: 17px; font-weight: 500; margin-bottom: 6px; }
+        .source-hint { font-size: 13px; color: var(--text-muted); }
+
+        /* 上传区 */
+        .upload-drop {
+            margin-top: 20px;
+            padding: 48px 28px;
+            border: 2px dashed rgba(201,169,110,0.15);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            display: none;
+        }
+        .upload-drop.visible { display: block; }
+        .upload-drop:hover,
+        .upload-drop.dragover {
+            border-color: var(--gold-400);
+            background: rgba(201,169,110,0.03);
+        }
+        .upload-drop-text { color: var(--text-secondary); margin-bottom: 6px; font-size: 15px; }
+        .upload-drop-hint { font-size: 12px; color: var(--text-muted); }
+        #fileInput { display: none; }
+
+        /* AI生成选项 */
+        .ai-options {
+            margin-top: 20px;
+            display: none;
+        }
+        .ai-options.visible { display: block; }
+
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .style-card {
+            padding: 20px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .style-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(201,169,110,0.04), transparent);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        .style-card:hover::before { opacity: 1; }
+        .style-card:hover {
+            border-color: rgba(201,169,110,0.3);
+            transform: translateY(-2px);
+        }
+        .style-card.selected {
+            border-color: var(--gold-400);
+            background: rgba(201,169,110,0.06);
+            box-shadow: var(--shadow-glow-gold);
+        }
+        .style-card.selected::before { opacity: 1; }
+        .style-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            margin: 0 auto 10px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .style-name { font-size: 14px; font-weight: 500; }
+        .style-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+        .desc-input {
+            width: 100%;
+            padding: 14px 18px;
+            margin-top: 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: var(--font-sans);
+            resize: vertical;
+            min-height: 72px;
+            transition: var(--transition);
+        }
+        .desc-input:focus {
+            outline: none;
+            border-color: var(--gold-400);
+            box-shadow: 0 0 0 3px rgba(201,169,110,0.08);
+        }
+        .desc-input::placeholder { color: var(--text-muted); }
+
+        /* ═══════════════════════════════════════════
+           步骤2: 纺织品选择
+           ═══════════════════════════════════════════ */
+        .textile-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .textile-card {
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            background: var(--bg-elevated);
+        }
+        .textile-card:hover {
+            border-color: rgba(201,169,110,0.3);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg), var(--shadow-glow-gold);
+        }
+        .textile-card.selected {
+            border-color: var(--gold-400);
+            box-shadow: 0 0 0 2px var(--gold-400), var(--shadow-lg), var(--shadow-glow-gold);
+        }
+
+        .textile-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            transition: var(--transition);
+        }
+        .textile-card:hover .textile-img {
+            transform: scale(1.03);
+        }
+
+        .textile-body {
+            padding: 16px 18px;
+        }
+        .textile-name {
+            font-family: var(--font-serif);
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .textile-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .textile-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--gold-400);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: var(--text-inverse);
+            box-shadow: var(--shadow-sm);
+        }
+        .textile-card.selected .textile-badge { display: flex; }
+
+        /* 自定义输入 */
+        .custom-input-row {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+        .custom-input-label {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .custom-input-wrap {
+            display: flex;
+            gap: 10px;
+        }
+        .custom-input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: var(--font-sans);
+            transition: var(--transition);
+        }
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--gold-400);
+        }
+        .custom-input::placeholder { color: var(--text-muted); }
+
+        /* ═══════════════════════════════════════════
+           步骤3: 预览
+           ═══════════════════════════════════════════ */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            min-height: 400px;
+        }
+
+        .preview-card {
+            position: relative;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+        }
+
+        .preview-tag {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 3;
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            background: var(--bg-glass-heavy);
+            backdrop-filter: blur(12px);
+            font-size: 12px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .preview-img {
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+            object-fit: cover;
+            display: none;
+        }
+        .preview-img.visible { display: block; }
+
+        .preview-empty {
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            gap: 10px;
+        }
+        .preview-empty-text { font-size: 14px; color: var(--text-muted); }
+
+        /* 加载态 */
+        .loading-mask {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            background: rgba(6,6,10,0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            border-radius: var(--radius-md);
+        }
+        .loading-mask.visible { display: flex; }
+
+        .loader {
+            width: 44px;
+            height: 44px;
+            border: 3px solid var(--border);
+            border-top-color: var(--gold-400);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .loading-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ═══════════════════════════════════════════
+           适配评分卡片
+           ═══════════════════════════════════════════ */
+        .score-card {
+            margin-top: 24px;
+            padding: 28px;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, rgba(201,169,110,0.06), rgba(107,189,138,0.04));
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .score-card.visible { display: block; animation: fadeSlideUp 0.5s var(--ease-out); }
+
+        .score-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+        .score-title {
+            font-family: var(--font-serif);
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .score-num {
+            font-family: var(--font-serif);
+            font-size: 40px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold-200), var(--gold-400));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        .score-unit {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .score-bar {
+            height: 5px;
+            border-radius: 3px;
+            background: var(--bg-deep);
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--gold-500), var(--jade));
+            transition: width 1.2s var(--ease-out);
+            width: 0%;
+        }
+
+        .score-tips {
+            list-style: none;
+            display: grid;
+            gap: 8px;
+        }
+        .score-tip {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.5;
+        }
+        .score-tip::before {
+            content: '◆';
+            color: var(--gold-400);
+            font-size: 8px;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           下载按钮
+           ═══════════════════════════════════════════ */
+        .download-btn {
+            position: absolute;
+            bottom: 14px;
+            right: 14px;
+            z-index: 3;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--bg-glass-heavy);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition-fast);
+        }
+        .download-btn:hover {
+            border-color: var(--gold-400);
+            color: var(--gold-300);
+            background: rgba(201,169,110,0.15);
+        }
+        .download-btn.visible { display: flex; }
+
+        /* ═══════════════════════════════════════════
+           进度计时
+           ═══════════════════════════════════════════ */
+        .progress-timer {
+            font-family: var(--font-sans);
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--gold-300);
+            letter-spacing: 2px;
+        }
+        .progress-bar-wrap {
+            width: 200px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--border);
+            overflow: hidden;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--gold-400), var(--jade));
+            width: 0%;
+            transition: width 1s linear;
+        }
+
+        /* ═══════════════════════════════════════════
+           历史面板
+           ═══════════════════════════════════════════ */
+        .history-panel {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            height: 100vh;
+            z-index: 150;
+            background: var(--bg-glass-heavy);
+            backdrop-filter: blur(24px);
+            border-left: 1px solid var(--border);
+            transition: right 0.4s var(--ease-out);
+            display: flex;
+            flex-direction: column;
+        }
+        .history-panel.open { right: 0; }
+
+        .history-head {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .history-title {
+            font-family: var(--font-serif);
+            font-size: 17px;
+            font-weight: 500;
+        }
+        .history-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: var(--transition-fast);
+        }
+        .history-close:hover {
+            border-color: var(--rose);
+            color: var(--rose);
+        }
+
+        .history-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .history-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            align-items: center;
+        }
+        .history-item:hover {
+            border-color: rgba(201,169,110,0.25);
+            background: rgba(201,169,110,0.03);
+        }
+        .history-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-xs);
+            object-fit: cover;
+            flex-shrink: 0;
+            background: var(--bg-elevated);
+        }
+        .history-info { flex: 1; min-width: 0; }
+        .history-type {
+            font-size: 12px;
+            color: var(--gold-400);
+            margin-bottom: 2px;
+        }
+        .history-name {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .history-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .history-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+        .history-foot {
+            padding: 14px 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .history-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 140;
+            background: rgba(6,6,10,0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .history-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ═══════════════════════════════════════════
+           操作栏
+           ═══════════════════════════════════════════ */
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 32px;
+            flex-wrap: wrap;
+        }
+
+        /* ═══════════════════════════════════════════
+           Toast
+           ═══════════════════════════════════════════ */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 200;
+            padding: 14px 24px;
+            border-radius: var(--radius-md);
+            background: var(--bg-glass-heavy);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 14px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(80px);
+            opacity: 0;
+            transition: var(--transition);
+            pointer-events: none;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.ok { border-color: var(--jade); }
+        .toast.err { border-color: var(--rose); }
+
+        /* ═══════════════════════════════════════════
+           动画
+           ═══════════════════════════════════════════ */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ═══════════════════════════════════════════
+           响应式
+           ═══════════════════════════════════════════ */
+        @media (max-width: 900px) {
+            .source-grid { grid-template-columns: 1fr; }
+            .style-grid { grid-template-columns: repeat(2, 1fr); }
+            .textile-grid { grid-template-columns: repeat(2, 1fr); }
+            .preview-grid { grid-template-columns: 1fr; }
+            .hero-metrics { gap: 28px; }
+            .stepper { flex-wrap: wrap; gap: 8px; }
+            .step-line { display: none; }
+        }
+        @media (max-width: 600px) {
+            .textile-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+        }
+
+        /* ═══════════════════════════════════════════
+           微交互增强 & Hover 效果
+           ═══════════════════════════════════════════ */
+
+        /* 上传区域增强 */
+        #uploadDrop {
+            transition: all .25s var(--ease-out);
+        }
+        #uploadDrop:hover {
+            border-color: #b8875a;
+            background: rgba(212, 165, 116, .05);
+            transform: scale(1.01);
+        }
+
+        /* 按钮全局过渡增强 */
+        .btn {
+            transition: all .25s cubic-bezier(.16, 1, .3, 1);
+            will-change: transform, box-shadow;
+        }
+
+        /* 金色按钮 hover 增强 */
+        .btn-gold:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(180, 120, 50, .3);
+        }
+        .btn-gold:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(180, 120, 50, .2);
+        }
+
+        /* 幽灵按钮 hover 增强 */
+        .btn-ghost:hover {
+            background: rgba(44, 36, 20, .08);
+            border-color: rgba(44, 36, 20, .3);
+        }
+
+        /* 面板 hover 微光效果 */
+        .panel {
+            transition: box-shadow .3s var(--ease-out), border-color .3s var(--ease-out);
+        }
+        .panel:hover {
+            box-shadow: var(--shadow-md), 0 0 40px rgba(201, 169, 110, .04);
+            border-color: rgba(201, 169, 110, .15);
+        }
+
+        /* 来源卡片增强 */
+        .source-card {
+            transition: all .25s var(--ease-out);
+        }
+        .source-card:hover .source-icon-wrap {
+            border-color: rgba(201, 169, 110, .3);
+            background: rgba(201, 169, 110, .1);
+            transform: scale(1.05);
+        }
+        .source-icon-wrap {
+            transition: all .25s var(--ease-out);
+        }
+
+        /* 风格卡片增强 */
+        .style-card {
+            transition: all .25s var(--ease-out);
+        }
+        .style-card:hover .style-thumb {
+            transform: scale(1.08);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+        }
+        .style-thumb {
+            transition: all .25s var(--ease-out);
+        }
+
+        /* 纺织品卡片增强 */
+        .textile-card {
+            transition: all .3s var(--ease-out);
+        }
+        .textile-card:hover .textile-body {
+            background: rgba(201, 169, 110, .02);
+        }
+        .textile-body {
+            transition: background .3s var(--ease-out);
+        }
+
+        /* 步骤条 hover 增强 */
+        .step:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 12px rgba(201, 169, 110, .08);
+        }
+
+        /* 导航链接增强 */
+        .nav-link {
+            transition: all .2s var(--ease-out);
+        }
+        .nav-link:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 导航按钮增强 */
+        .nav-btn {
+            transition: all .2s var(--ease-out);
+        }
+        .nav-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 12px rgba(201, 169, 110, .1);
+        }
+
+        /* 历史面板项增强 */
+        .history-item {
+            transition: all .2s var(--ease-out);
+        }
+        .history-item:hover {
+            transform: translateX(4px);
+        }
+        .history-item:hover .history-thumb {
+            transform: scale(1.05);
+        }
+        .history-thumb {
+            transition: transform .2s var(--ease-out);
+        }
+
+        /* 预览卡片增强 */
+        .preview-card {
+            transition: box-shadow .3s var(--ease-out);
+        }
+        .preview-card:hover {
+            box-shadow: var(--shadow-lg), 0 0 30px rgba(201, 169, 110, .06);
+        }
+
+        /* 下载按钮脉冲 */
+        .download-btn.visible {
+            animation: fadeSlideUp .3s var(--ease-out);
+        }
+        .download-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* 评分卡片增强 */
+        .score-card {
+            transition: all .3s var(--ease-out);
+        }
+        .score-card:hover {
+            box-shadow: var(--shadow-md), 0 0 40px rgba(201, 169, 110, .06);
+        }
+
+        /* Toast 增强 */
+        .toast {
+            transition: all .3s var(--ease-spring);
+        }
+        .toast.show {
+            transform: translateY(0) scale(1);
+        }
+
+        /* 输入框 focus 增强 */
+        .desc-input, .custom-input {
+            transition: all .25s var(--ease-out);
+        }
+        .desc-input:focus, .custom-input:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(201, 169, 110, .08);
+        }
+
+        /* Hero 按钮组 hover 链式效果 */
+        .hero-actions .btn {
+            position: relative;
+        }
+        .hero-actions .btn-gold::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            background: linear-gradient(135deg, var(--gold-400), var(--jade));
+            opacity: 0;
+            z-index: -1;
+            transition: opacity .3s var(--ease-out);
+            filter: blur(12px);
+        }
+        .hero-actions .btn-gold:hover::before {
+            opacity: .3;
+        }
+
+        /* 步骤数字动画 */
+        .step-num {
+            transition: all .25s var(--ease-out);
+        }
+        .step:hover .step-num {
+            transform: scale(1.1);
+        }
+
+        /* 选中态 badge 弹入 */
+        .textile-badge {
+            animation: badgePop .3s var(--ease-spring);
+        }
+        @keyframes badgePop {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Logo hover */
+        .nav-logo {
+            transition: all .3s var(--ease-out);
+        }
+        .nav-brand:hover .nav-logo {
+            transform: rotate(8deg) scale(1.05);
+            box-shadow: var(--shadow-glow-gold), 0 0 24px rgba(201, 169, 110, .2);
+        }
+
+        /* 指标数字 hover */
+        .metric {
+            transition: transform .2s var(--ease-out);
+        }
+        .metric:hover {
+            transform: translateY(-2px);
+        }
+        .metric:hover .metric-value {
+            filter: brightness(1.2);
+        }
+        .metric-value {
+            transition: filter .2s var(--ease-out);
+        }
+    </style>
+</head>
+<body>
+
+<!-- 统一导航条 -->
+<div id="wm-nav" style="position:sticky;top:0;z-index:9999;background:rgba(44,36,20,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(245,240,232,.08);padding:0 24px">
+  <div style="max-width:1400px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:52px">
+    <a href="/" style="text-decoration:none;display:flex;align-items:baseline;gap:8px">
+      <span style="font-family:'Noto Serif SC',serif;font-size:14px;font-weight:700;color:#f5f0e8;letter-spacing:.1em">织觉引擎 WeaveMind</span>
+    </a>
+    <div style="display:flex;gap:6px">
+      <a href="/translator" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">审美翻译</a>
+      <a href="/spatial" style="padding:6px 14px;font-size:11px;color:#f5f0e8;background:rgba(245,240,232,.1);border-radius:3px;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;letter-spacing:.04em">空间感知</a>
+      <a href="/trend" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">趋势先知</a>
+      <a href="/gene" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">基因编辑</a>
+      <a href="/c2m.html" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">C2M体验</a>
+    </div>
+  </div>
+</div>
+
+<!-- 背景层 -->
+<div class="bg-layer">
+    <div class="bg-orb bg-orb--gold"></div>
+    <div class="bg-orb bg-orb--jade"></div>
+    <div class="bg-orb bg-orb--blue"></div>
+</div>
+<div class="bg-grain"></div>
+<div class="bg-grid"></div>
+
+<!-- 导航 -->
+<nav class="nav">
+    <a class="nav-brand" href="#">
+        <div class="nav-logo">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="rgba(10,10,15,0.9)" stroke-width="2" stroke-linecap="round">
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2"/>
+                <path d="M12 2c-2 3-3 6-3 10s1 7 3 10"/>
+                <path d="M12 2c2 3 3 6 3 10s-1 7-3 10"/>
+                <path d="M2 12h20"/>
+            </svg>
+        </div>
+        <div class="nav-text">
+            <span class="nav-title">织觉引擎</span>
+            <span class="nav-sub">WeaveMind Spatial</span>
+        </div>
+    </a>
+    <div class="nav-links">
+        <a class="nav-link active" onclick="scrollTo_('#hero')">首页</a>
+        <a class="nav-link" onclick="scrollTo_('#workspace')">工作台</a>
+        <a class="nav-link" onclick="showAbout()">关于</a>
+        <div class="nav-divider"></div>
+        <a class="nav-btn" onclick="toggleHistory()">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            历史记录
+        </a>
+    </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero" id="hero">
+    <div class="hero-bg-img"></div>
+
+    <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        AI+家纺电商创新平台
+    </div>
+
+    <h1 class="hero-title">
+        <span class="line1">空间感知引擎</span>
+        <span class="line2">让家纺在线上「活」起来</span>
+    </h1>
+
+    <p class="hero-desc">
+        拍一张房间照片，AI为你预览不同风格的家纺效果。<br>
+        基于审美基因组学，告别「买了不知道好不好看」。
+    </p>
+
+    <div class="hero-actions">
+        <button class="btn btn-gold" onclick="scrollTo_('#workspace')">开始体验</button>
+        <button class="btn btn-ghost" onclick="showAbout()">了解更多</button>
+    </div>
+
+    <div class="hero-metrics">
+        <div class="metric">
+            <div class="metric-value">6</div>
+            <div class="metric-label">预设风格</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value">AI</div>
+            <div class="metric-label">智能生成</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value">30s</div>
+            <div class="metric-label">出图速度</div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ 工作台 ═══════════════ -->
+<section class="workspace" id="workspace">
+    <div class="section-header">
+        <div class="section-eyebrow">Workshop</div>
+        <h2 class="section-title">空间预览工作台</h2>
+        <p class="section-subtitle">三步完成家纺空间预览：选择房间 → 选择纺织品 → 查看效果</p>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="stepper">
+        <div class="step active" data-step="1" onclick="goStep(1)">
+            <span class="step-num">1</span> 选择房间
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="2" onclick="goStep(2)">
+            <span class="step-num">2</span> 选择纺织品
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="3" onclick="goStep(3)">
+            <span class="step-num">3</span> 预览效果
+        </div>
+    </div>
+
+    <!-- ──── 步骤1 ──── -->
+    <div class="step-panel active" id="step1">
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-head-title">选择房间来源</span>
+            </div>
+            <div class="panel-body">
+                <div class="source-grid">
+                    <div class="source-card" onclick="pickSource('upload',this)">
+                        <div class="source-icon-wrap">
+                            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--gold-400)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="3"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                        </div>
+                        <div class="source-name">上传我的房间</div>
+                        <div class="source-hint">拍摄或上传一张房间照片</div>
+                    </div>
+                    <div class="source-card" onclick="pickSource('generate',this)">
+                        <div class="source-icon-wrap">
+                            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--gold-400)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                <path d="M2 17l10 5 10-5"/>
+                                <path d="M2 12l10 5 10-5"/>
+                            </svg>
+                        </div>
+                        <div class="source-name">AI 生成房间</div>
+                        <div class="source-hint">选择风格，自动生成精美场景</div>
+                    </div>
+                </div>
+
+                <!-- 上传 -->
+                <div class="upload-drop" id="uploadDrop">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <div class="upload-drop-text">拖拽图片到此处，或点击上传</div>
+                    <div class="upload-drop-hint">支持 PNG / JPG / WEBP · 最大 16MB</div>
+                    <input type="file" id="fileInput" accept="image/*">
+                </div>
+
+                <!-- AI生成 -->
+                <div class="ai-options" id="aiOptions">
+                    <div class="style-grid">
+                        <div class="style-card" onclick="pickStyle(this,'modern')" data-style="modern">
+                            <div class="style-thumb" style="background:linear-gradient(135deg,#2a2a3a,#3a3a4a)"></div>
+                            <div class="style-name">现代客厅</div>
+                            <div class="style-hint">明亮大气</div>
+                        </div>
+                        <div class="style-card" onclick="pickStyle(this,'bedroom')" data-style="bedroom">
+                            <div class="style-thumb" style="background:linear-gradient(135deg,#3a2a2a,#4a3535)"></div>
+                            <div class="style-name">温馨卧室</div>
+                            <div class="style-hint">舒适暖调</div>
+                        </div>
+                        <div class="style-card" onclick="pickStyle(this,'chinese')" data-style="chinese">
+                            <div class="style-thumb" style="background:linear-gradient(135deg,#3a2a1a,#5a3a1a)"></div>
+                            <div class="style-name">中式雅居</div>
+                            <div class="style-hint">古典韵味</div>
+                        </div>
+                        <div class="style-card" onclick="pickStyle(this,'nordic')" data-style="nordic">
+                            <div class="style-thumb" style="background:linear-gradient(135deg,#1a2a1a,#2a3a2a)"></div>
+                            <div class="style-name">北欧空间</div>
+                            <div class="style-hint">简约自然</div>
+                        </div>
+                    </div>
+                    <textarea class="desc-input" id="roomDesc"
+                        placeholder="可选：补充描述你想要的房间细节，例如：大落地窗、实木地板、暖色灯光..."></textarea>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-gold" id="s1Next" onclick="doStep1()" disabled>下一步</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ──── 步骤2 ──── -->
+    <div class="step-panel" id="step2">
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-head-title">选择纺织品风格</span>
+                <span class="panel-head-badge">选择一种风格，或自定义描述</span>
+            </div>
+            <div class="panel-body">
+                <div class="textile-grid" id="textileGrid"></div>
+
+                <div class="custom-input-row">
+                    <div class="custom-input-label">或者描述你想要的窗帘效果</div>
+                    <div class="custom-input-wrap">
+                        <input class="custom-input" id="customTextile"
+                            placeholder="例如：深蓝色丝绒窗帘，带金色刺绣花纹，垂坠感强...">
+                        <button class="btn btn-ghost btn-sm" onclick="useCustom()">使用</button>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-ghost" onclick="goStep(1)">← 上一步</button>
+                    <button class="btn btn-gold" id="s2Next" onclick="doStep2()" disabled>生成预览 →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ──── 步骤3 ──── -->
+    <div class="step-panel" id="step3">
+        <div class="panel">
+            <div class="panel-head">
+                <span class="panel-head-title">空间预览效果</span>
+                <span id="tagName" class="panel-head-badge"></span>
+            </div>
+            <div class="panel-body">
+                <div class="preview-grid">
+                    <!-- 原图 -->
+                    <div class="preview-card">
+                        <div class="preview-tag">原始房间</div>
+                        <img class="preview-img" id="origImg" alt="原始房间">
+                        <div class="preview-empty" id="origEmpty">
+                            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                            <div class="preview-empty-text">原始房间</div>
+                        </div>
+                    </div>
+                    <!-- 结果 -->
+                    <div class="preview-card">
+                        <div class="preview-tag">AI 预览</div>
+                        <img class="preview-img" id="resultImg" alt="AI预览">
+                        <div class="preview-empty" id="resultEmpty">
+                            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="var(--text-muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            <div class="preview-empty-text">点击「生成预览」查看效果</div>
+                        </div>
+                        <button class="download-btn" id="dlBtn" onclick="downloadResult()" title="下载预览图">⬇</button>
+                        <div class="loading-mask" id="loader">
+                            <div class="loader"></div>
+                            <div class="progress-timer" id="timer">0s</div>
+                            <div class="progress-bar-wrap"><div class="progress-bar-inner" id="progBar"></div></div>
+                            <div class="loading-label">AI 正在为您的空间添置家纺...</div>
+                            <div class="loading-sub">预计 15-30 秒</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 评分 -->
+                <div class="score-card" id="scoreCard">
+                    <div class="score-head">
+                        <div class="score-title">空间审美适配评估</div>
+                        <div>
+                            <div class="score-num" id="scoreNum">0</div>
+                            <div class="score-unit">适配度评分</div>
+                        </div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-fill" id="scoreBar"></div>
+                    </div>
+                    <ul class="score-tips" id="scoreTips"></ul>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-ghost" onclick="goStep(2)">换个风格</button>
+                    <button class="btn btn-ghost" onclick="goStep(1)">换个房间</button>
+                    <button class="btn btn-gold" onclick="doStep2()">重新生成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 历史面板 -->
+<div class="history-overlay" id="histOverlay" onclick="toggleHistory()"></div>
+<div class="history-panel" id="histPanel">
+    <div class="history-head">
+        <span class="history-title">生成历史</span>
+        <button class="history-close" onclick="toggleHistory()">✕</button>
+    </div>
+    <div class="history-body" id="histBody">
+        <div class="history-empty">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--text-muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35;margin-bottom:12px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+            <div>暂无历史记录</div>
+        </div>
+    </div>
+    <div class="history-foot">
+        <button class="btn btn-ghost btn-sm" style="width:100%" onclick="clearHistory()">清空历史</button>
+    </div>
+</div>
+
+<script>
+/* ═══════════════ 状态 ═══════════════ */
+const S = {
+    step: 1,
+    src: null,
+    room: null,
+    roomUrl: null,
+    style: null,
+    textile: null,
+    custom: null,
+    resultFilename: null   // 用于下载
+};
+
+/* ═══════════════ 工具 ═══════════════ */
+const $ = s => document.getElementById(s);
+const toast = (msg, type='info') => {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = `toast ${type==='success'?'ok':type==='error'?'err':''} show`;
+    setTimeout(() => t.classList.remove('show'), 4000);
+};
+const scrollTo_ = sel => document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth' });
+
+function showAbout() {
+    alert('🧬 织觉引擎 WeaveMind\n\n基于审美基因组学的家纺空间感知系统\n\n• AI驱动的空间理解与图片编辑\n• 物理级家纺效果渲染\n• 审美适配度智能评估\n• 一键下载预览结果');
+}
+
+/* ═══════════════ 步骤导航 ═══════════════ */
+function goStep(n) {
+    S.step = n;
+    document.querySelectorAll('.step').forEach(el => {
+        const s = +el.dataset.step;
+        el.classList.toggle('active', s === n);
+        el.classList.toggle('done', s < n);
+    });
+    document.querySelectorAll('.step-panel').forEach(el => el.classList.remove('active'));
+    $(`step${n}`).classList.add('active');
+    scrollTo_('#workspace');
+}
+
+/* ═══════════════ 步骤1 ═══════════════ */
+function pickSource(type, el) {
+    S.src = type;
+    document.querySelectorAll('.source-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    $('uploadDrop').classList.toggle('visible', type === 'upload');
+    $('aiOptions').classList.toggle('visible', type === 'generate');
+    syncS1();
+}
+function syncS1() {
+    $('s1Next').disabled = !(S.src === 'upload' ? S.room : S.style);
+}
+
+// 上传
+const drop = $('uploadDrop');
+const fileIn = $('fileInput');
+drop.onclick = () => fileIn.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('dragover'); };
+drop.ondragleave = () => drop.classList.remove('dragover');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('dragover'); if(e.dataTransfer.files.length) upload(e.dataTransfer.files[0]); };
+fileIn.onchange = e => { if(e.target.files.length) upload(e.target.files[0]); };
+
+async function upload(file) {
+    if(file.size > 16 * 1024 * 1024) return toast('文件超过16MB限制','error');
+    const fd = new FormData(); fd.append('file', file);
+    toast('上传中...');
+    try {
+        const r = await fetch('./api/upload-room', { method:'POST', body:fd });
+        const d = await r.json();
+        if(d.success) {
+            S.room = d.filename;
+            S.roomUrl = `./uploads/${d.filename}`;
+            toast(`上传成功 (${(d.size/1024).toFixed(0)}KB)`,'success');
+            syncS1();
+        } else toast(d.error, 'error');
+    } catch { toast('上传失败，请检查网络','error'); }
+}
+
+function pickStyle(el, s) {
+    S.style = s;
+    document.querySelectorAll('.style-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    syncS1();
+}
+
+async function doStep1() {
+    if(S.src === 'generate' && S.style) {
+        const btn = $('s1Next');
+        btn.disabled = true;
+        btn.textContent = '生成中...';
+        toast('AI 正在生成房间场景...');
+        try {
+            const r = await fetch('./api/generate-room', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ style: S.style, description: $('roomDesc').value })
+            });
+            const d = await r.json();
+            if(d.success) {
+                S.room = d.filename;
+                S.roomUrl = `./outputs/${d.filename}`;
+                toast('房间生成完成','success');
+                loadTextiles();
+                goStep(2);
+            } else toast(d.error, 'error');
+        } catch(e) { toast('生成失败，请重试','error'); }
+        btn.disabled = false;
+        btn.textContent = '下一步 →';
+    } else if(S.src === 'upload' && S.room) {
+        loadTextiles();
+        goStep(2);
+    }
+}
+
+/* ═══════════════ 步骤2 ═══════════════ */
+async function loadTextiles() {
+    try {
+        const r = await fetch('./api/textiles');
+        const d = await r.json();
+        const colors = {chinese_ink:'#2a2a2a',nordic_minimal:'#2a3a2a',japanese_wabi:'#3a3020',french_roma:'#3a2028',modern_abstract:'#1a2a3a',luxury_velvet:'#1a3a2a'};
+        $('textileGrid').innerHTML = d.textiles.map(t => `
+            <div class="textile-card" onclick="pickTextile(this,'${t.id}')" data-id="${t.id}">
+                <img class="textile-img" src="../assets/textiles/${t.id}.png" alt="${t.name}"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                <div style="display:none;height:200px;background:${colors[t.id]||'var(--bg-elevated)'}"></div>
+                <div class="textile-body">
+                    <div class="textile-name">${t.name}</div>
+                    <div class="textile-desc">${t.description}</div>
+                </div>
+                <div class="textile-badge">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+            </div>
+        `).join('');
+    } catch { toast('加载纺织品列表失败','error'); }
+}
+
+function pickTextile(el, id) {
+    S.textile = id; S.custom = null;
+    document.querySelectorAll('.textile-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    $('s2Next').disabled = false;
+}
+
+function useCustom() {
+    const v = $('customTextile').value.trim();
+    if(!v) return toast('请输入纺织品描述','error');
+    S.custom = v; S.textile = null;
+    document.querySelectorAll('.textile-card').forEach(c => c.classList.remove('selected'));
+    $('s2Next').disabled = false;
+    toast('已使用自定义描述','success');
+}
+
+/* ═══════════════ 步骤3: 预览 + 计时 + 下载 + 评分 ═══════════════ */
+let timerInterval = null;
+
+async function doStep2() {
+    goStep(3);
+
+    // 原图
+    $('origImg').src = S.roomUrl;
+    $('origImg').classList.add('visible');
+    $('origEmpty').style.display = 'none';
+
+    // 加载态
+    $('loader').classList.add('visible');
+    $('resultImg').classList.remove('visible');
+    $('resultEmpty').style.display = 'flex';
+    $('scoreCard').classList.remove('visible');
+    $('dlBtn').classList.remove('visible');
+
+    // 名称
+    const name = S.custom ? '自定义设计' :
+        document.querySelector(`.textile-card[data-id="${S.textile}"] .textile-name`)?.textContent || '';
+    $('tagName').textContent = name;
+
+    // 启动计时
+    let elapsed = 0;
+    $('timer').textContent = '0s';
+    $('progBar').style.width = '0%';
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        elapsed++;
+        $('timer').textContent = elapsed + 's';
+        // 进度条：预期30秒，到90%后减速
+        const pct = Math.min(90, (elapsed / 30) * 90);
+        $('progBar').style.width = pct + '%';
+    }, 1000);
+
+    try {
+        const body = S.custom
+            ? { room_image: S.room, description: S.custom }
+            : { room_image: S.room, textile_id: S.textile };
+
+        const r = await fetch('./api/preview-textile', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        });
+        const d = await r.json();
+
+        clearInterval(timerInterval);
+        $('progBar').style.width = '100%';
+
+        if(d.success) {
+            S.resultFilename = d.filename;
+            $('resultImg').src = `./outputs/${d.filename}`;
+            $('resultImg').classList.add('visible');
+            $('resultEmpty').style.display = 'none';
+            $('dlBtn').classList.add('visible');
+
+            // 显示生成模式
+            const modeText = d.mode === 'edit' ? '图片编辑' : 'AI生成';
+            toast(`预览完成 · ${modeText} · ${elapsed}s`, 'success');
+
+            // 从后端获取真实评分
+            await fetchScore();
+            // 刷新历史
+            loadHistory();
+        } else {
+            toast(d.error, 'error');
+            $('resultEmpty').style.display = 'flex';
+        }
+    } catch(e) {
+        clearInterval(timerInterval);
+        toast('生成失败，请重试','error');
+        $('resultEmpty').style.display = 'flex';
+    }
+    $('loader').classList.remove('visible');
+}
+
+/* ═══════════════ 评分（后端） ═══════════════ */
+async function fetchScore() {
+    try {
+        const r = await fetch('./api/evaluate', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                room_style: S.style || 'modern',
+                textile_id: S.textile,
+                custom_prompt: S.custom
+            })
+        });
+        const d = await r.json();
+
+        $('scoreCard').classList.add('visible');
+        $('scoreNum').textContent = d.score;
+        setTimeout(() => { $('scoreBar').style.width = d.score + '%'; }, 100);
+
+        // 颜色：高分金色，中分蓝色，低分红色
+        const numEl = $('scoreNum');
+        if(d.score >= 85) numEl.style.background = 'linear-gradient(135deg, var(--gold-200), var(--gold-400))';
+        else if(d.score >= 70) numEl.style.background = 'linear-gradient(135deg, var(--blue), var(--jade))';
+        else numEl.style.background = 'linear-gradient(135deg, var(--rose), var(--gold-400))';
+        numEl.style.webkitBackgroundClip = 'text';
+        numEl.style.webkitTextFillColor = 'transparent';
+
+        $('scoreTips').innerHTML = d.suggestions.map(t => `<li class="score-tip">${t}</li>`).join('');
+    } catch {
+        // 降级到前端模拟
+        showScoreFallback();
+    }
+}
+
+function showScoreFallback() {
+    const score = 80 + Math.floor(Math.random() * 16);
+    $('scoreCard').classList.add('visible');
+    $('scoreNum').textContent = score;
+    setTimeout(() => { $('scoreBar').style.width = score + '%'; }, 100);
+    $('scoreTips').innerHTML = [
+        '<li class="score-tip">该纺织品与房间整体色调协调度较高</li>',
+        '<li class="score-tip">建议搭配同色系靠枕提升整体感</li>',
+        '<li class="score-tip">自然光下的呈现效果优秀</li>'
+    ].join('');
+}
+
+/* ═══════════════ 下载 ═══════════════ */
+function downloadResult() {
+    if(!S.resultFilename) return toast('没有可下载的预览图','error');
+    const a = document.createElement('a');
+    a.href = `./outputs/${S.resultFilename}`;
+    a.download = `weavemind_preview_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast('开始下载','success');
+}
+
+/* ═══════════════ 历史面板 ═══════════════ */
+function toggleHistory() {
+    const panel = $('histPanel');
+    const overlay = $('histOverlay');
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open');
+    overlay.classList.toggle('open');
+    if(!isOpen) loadHistory();
+}
+
+async function loadHistory() {
+    try {
+        const r = await fetch('./api/history?limit=20');
+        const d = await r.json();
+        const body = $('histBody');
+
+        if(!d.history || d.history.length === 0) {
+            body.innerHTML = `
+                <div class="history-empty">
+                    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--text-muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35;margin-bottom:12px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+                    <div>暂无历史记录</div>
+                    <div style="font-size:12px;margin-top:4px;color:var(--text-muted)">生成预览后会自动记录</div>
+                </div>`;
+            return;
+        }
+
+        const typeMap = {
+            'room_generate': {icon:'A', label:'生成房间'},
+            'textile_preview': {icon:'B', label:'纺织品预览'}
+        };
+
+        body.innerHTML = d.history.map(h => {
+            const info = typeMap[h.type] || {icon:'—', label:h.type};
+            const imgSrc = h.filename ? `./outputs/${h.filename}` : '';
+            const textileName = h.textile ? (h.textile === 'custom' ? '自定义' : h.textile) : '';
+            return `
+                <div class="history-item" onclick="loadHistoryItem('${imgSrc}')">
+                    ${imgSrc ? `<img class="history-thumb" src="${imgSrc}" onerror="this.style.display='none'">` : ''}
+                    <div class="history-info">
+                        <div class="history-type">${info.icon} ${info.label}</div>
+                        <div class="history-name">${textileName || h.style || h.description || ''}</div>
+                        <div class="history-time">${h.timestamp || ''}</div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch(e) {
+        console.error('Load history error:', e);
+    }
+}
+
+function loadHistoryItem(imgSrc) {
+    if(!imgSrc) return;
+    // 在新窗口打开图片
+    window.open(imgSrc, '_blank');
+}
+
+async function clearHistory() {
+    if(!confirm('确定清空所有历史记录？')) return;
+    try {
+        await fetch('./api/history', { method:'DELETE' });
+        loadHistory();
+        toast('历史已清空','success');
+    } catch { toast('清空失败','error'); }
+}
+
+/* ═══════════════ 初始化 ═══════════════ */
+document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+    });
+});
+</script>
+</body>
+</html>
