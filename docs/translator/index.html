@@ -182,10 +182,10 @@ button{transition:all .2s}
     </a>
     <div style="display:flex;gap:6px">
       <a href="../translator/" style="padding:6px 14px;font-size:11px;color:#f5f0e8;background:rgba(245,240,232,.1);border-radius:3px;text-decoration:none;font-family:system-ui,sans-serif;font-weight:600;letter-spacing:.04em">审美翻译</a>
-      <a href="../spatial/" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">空间感知</a>
-      <a href="../trend/" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">趋势先知</a>
-      <a href="../gene/" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">基因编辑</a>
-      <a href="../c2m.html" target="_blank" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">C2M体验</a>
+      <a href="../spatial/" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">空间感知</a>
+      <a href="../trend/" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">趋势先知</a>
+      <a href="../gene/" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">基因编辑</a>
+      <a href="../c2m.html" style="padding:6px 14px;font-size:11px;color:rgba(245,240,232,.6);text-decoration:none;font-family:system-ui,sans-serif;letter-spacing:.04em;transition:color .2s" onmouseover="this.style.color='#f5f0e8'" onmouseout="this.style.color='rgba(245,240,232,.6)'">C2M体验</a>
     </div>
   </div>
 </div>
@@ -301,23 +301,83 @@ button{transition:all .2s}
 </div>
 
 <script>
-var API='/translator';
+var API='';
 var currentDNA={},currentAnalysis=null,currentImage=null,selectedMode='faithful',selectedCraft='';
 var CRAFTS=[],MODES={};
+var demoMode=false;
+
+// 内嵌非遗工艺数据（后端不可用时作为fallback）
+var EMBEDDED_CRAFTS=[
+  {id:"blue_calico",name:"蓝印花布",name_en:"Blue Calico",origin:"南通",level:"国家级非遗",era:"明代至今",
+   desc:"以靛蓝为染料，豆粉石灰为防染浆，经刻版、刮浆、染色、刮灰等工序制成。蓝白相间，素雅清新。",
+   craft_traits:"防染印花、靛蓝染色、手工刻版",modern_fusion:"将蓝印花布的蓝白对比与现代几何结合，保留防染肌理感",
+   dna:{color_warmth:30,saturation:35,pattern_complex:70,texture_feel:55,style_modern:20,material_weight:45,luminosity:15,organic_ratio:85},
+   prompt_core:"Chinese indigo blue calico, deep blue and white resist pattern, traditional folk art motifs, hand-block printed",
+   image:"../references/nantong-ich/nantong_blue_calico.png"},
+  {id:"tie_dye",name:"扎染",name_en:"Tie-Dye",origin:"南通",level:"省级非遗",era:"唐代至今",
+   desc:"通过捆扎、缝绞、夹扎等手法防染，形成自然晕色和有机纹理，每件作品独一无二。",
+   craft_traits:"手工捆扎、自然晕染、有机纹理",modern_fusion:"扎染的随机性与数字渐变结合，靛蓝扩展为多色系",
+   dna:{color_warmth:40,saturation:50,pattern_complex:45,texture_feel:40,style_modern:40,material_weight:35,luminosity:25,organic_ratio:90},
+   prompt_core:"Chinese traditional tie-dye, indigo shibori, organic resist pattern, natural gradient, handcrafted unique texture",
+   image:"../references/nantong-ich/nantong_tie_dye.png"},
+  {id:"shen_embroidery",name:"沈绣",name_en:"Shen Embroidery",origin:"南通",level:"国家级非遗",era:"清末至今",
+   desc:"以沈寿为代表的仿真绣技法，融合西洋画理，针法细腻如照片般写实，被誉为中国刺绣的巅峰。",
+   craft_traits:"仿真绣法、丝线劈丝、光影渐变",modern_fusion:"沈绣的写实技法与数码像素风格碰撞，保留浮雕般的立体触感",
+   dna:{color_warmth:55,saturation:60,pattern_complex:85,texture_feel:30,style_modern:35,material_weight:25,luminosity:55,organic_ratio:70},
+   prompt_core:"fine silk embroidery, photorealistic needlework, delicate thread painting, Chinese embroidery, raised texture",
+   image:"../references/nantong-ich/nantong_shen_embroidery.png"},
+  {id:"tubu_weaving",name:"土布纺织",name_en:"Handwoven Cotton",origin:"南通",level:"省级非遗",era:"千年传承",
+   desc:"手工纺纱、脚踏织机，经纬交错织出条格纹样。质朴厚实，是最原始的家纺面料形态。",
+   craft_traits:"手工纺纱、脚踏织机、经纬交织",modern_fusion:"土布的粗粝质感与极简设计融合，条格纹用现代色彩重新诠释",
+   dna:{color_warmth:55,saturation:20,pattern_complex:25,texture_feel:80,style_modern:15,material_weight:65,luminosity:10,organic_ratio:95},
+   prompt_core:"handwoven cotton cloth, rustic natural fiber, earth tone stripes and checks, raw cotton texture, artisan loom woven",
+   image:"../references/nantong-ich/nantong_tubu_weaving.png"},
+  {id:"silk_weaving",name:"丝绸织造",name_en:"Silk Brocade",origin:"南通",level:"市级非遗",era:"宋元至今",
+   desc:"南通丝绸以提花织造见长，云锦、宋锦等纹样在丝线上交织出华丽图案，光泽流转。",
+   craft_traits:"提花织造、金线交织、多层色彩",modern_fusion:"丝绸的华丽光泽与Art Deco几何结合，传统云纹抽象化为现代装饰图案",
+   dna:{color_warmth:65,saturation:70,pattern_complex:80,texture_feel:20,style_modern:25,material_weight:40,luminosity:80,organic_ratio:50},
+   prompt_core:"Chinese silk brocade, intricate jacquard weave, lustrous fabric, traditional cloud and crane pattern, gold thread accent",
+   image:"../references/nantong-ich/nantong_silk_weaving.png"},
+  {id:"kite_pattern",name:"板鹞风筝",name_en:"Kite Art",origin:"南通",level:"国家级非遗",era:"宋代至今",
+   desc:"南通板鹞风筝以哨口音乐和彩绘装饰闻名，几何骨架上绘满吉祥纹样，色彩浓烈大胆。",
+   craft_traits:"几何骨架、彩绘装饰、哨口排列",modern_fusion:"板鹞风筝的浓烈色彩与孟菲斯设计风格碰撞，几何骨架变体为现代图案结构",
+   dna:{color_warmth:60,saturation:85,pattern_complex:75,texture_feel:30,style_modern:40,material_weight:20,luminosity:60,organic_ratio:45},
+   prompt_core:"Chinese ornamental kite pattern, bold geometric folk art, colorful decorative motifs, traditional auspicious symbols",
+   image:"../references/nantong-ich/nantong_kite_pattern.png"}
+];
+
+var EMBEDDED_MODES={
+  faithful:{name:"忠实还原",desc:"最大程度保留原图气质",suffix:""},
+  abstract:{name:"抽象提炼",desc:"提取核心视觉基因重构",suffix:", abstract artistic interpretation, simplified forms, textile design"},
+  pattern:{name:"纹样生成",desc:"转化为可重复的面料图案",suffix:", seamless repeating tile pattern, textile print, screen printable"},
+  fusion:{name:"非遗融合",desc:"与南通传统工艺深度结合",suffix:""}
+};
 
 window.addEventListener('DOMContentLoaded',function(){
   loadAll();setupNav();setupUpload();setupGen();
 });
 
 function loadAll(){
-  Promise.all([
-    fetch(API+'/api/crafts').then(function(r){return r.json()}),
-    fetch(API+'/api/modes').then(function(r){return r.json()})
-  ]).then(function(a){
-    CRAFTS=a[0].crafts||[];
-    MODES=a[1].modes||{};
+  fetch(API+'/api/crafts').then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+    CRAFTS=d.crafts||EMBEDDED_CRAFTS;
+    return fetch(API+'/api/modes');
+  }).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+    MODES=d.modes||EMBEDDED_MODES;
     renderCrafts();renderModes();loadRecent();
-  }).catch(function(e){console.error(e);});
+  }).catch(function(){
+    // 后端不可用，启用演示模式
+    demoMode=true;
+    CRAFTS=EMBEDDED_CRAFTS;
+    MODES=EMBEDDED_MODES;
+    document.getElementById('st').textContent='演示模式';
+    document.getElementById('st').style.background='rgba(74,122,90,.15)';
+    document.getElementById('st').style.color='#4a7a5a';
+    renderCrafts();renderModes();
+    var bar=document.createElement('div');
+    bar.style.cssText='background:rgba(212,165,116,.12);border:1px solid rgba(212,165,116,.3);border-radius:6px;padding:10px 16px;margin:16px 0;font-size:12px;color:#b8875a;text-align:center';
+    bar.innerHTML='🎭 演示模式 — 图片分析基于本地CV特征提取，AI生图展示非遗参考作品。启动后端服务可体验完整AI能力。';
+    document.querySelector('.wrap').insertBefore(bar,document.querySelector('.wrap').children[2]);
+  });
 }
 
 function setupNav(){
@@ -335,11 +395,10 @@ function setupNav(){
 }
 
 function renderCrafts(){
-  // ICH full page
   var el=document.getElementById('ich-full'),h='';
   for(var i=0;i<CRAFTS.length;i++){var c=CRAFTS[i];
     h+='<div class="ich-card" data-cid="'+c.id+'">';
-    h+='<img src="'+c.image+'" alt="'+c.name+'">';
+    h+='<img src="'+c.image+'" alt="'+c.name+'" onerror="this.style.background=\'var(--paper2)\';this.style.height=\'160px\'">';
     h+='<div class="body"><div class="title">'+c.name+' <span style="font-size:11px;color:var(--ink3);font-weight:400">'+c.name_en+'</span></div>';
     h+='<div class="meta">'+c.level+' &middot; '+c.origin+' &middot; '+c.era+'</div>';
     h+='<div class="desc">'+c.desc+'</div>';
@@ -362,29 +421,20 @@ function selectCraftFromLibrary(cid){
   document.getElementById('sec-lab').classList.add('on');
   selectedCraft=cid;
   selectedMode='fusion';
-
-  // 更新mode按钮
   var mbs=document.querySelectorAll('.mode');
   for(var j=0;j<mbs.length;j++){
     mbs[j].classList.remove('on');
     if(mbs[j].getAttribute('data-m')==='fusion')mbs[j].classList.add('on');
   }
-
-  // 更新craft列表
   var cis=document.querySelectorAll('.craft-item');
   for(var j=0;j<cis.length;j++){cis[j].classList.remove('selected');if(cis[j].getAttribute('data-cid')===cid)cis[j].classList.add('selected');}
-
   var craft=CRAFTS.find(function(c){return c.id===cid});
   if(!craft)return;
-
-  // 如果没上传过图片，用工艺图片作为预览
   if(!currentImage){
     document.getElementById('pv-img').src=craft.image;
     document.getElementById('upload-pv').style.display='block';
     currentImage=craft.image;
   }
-
-  // DNA融合：已上传图片的DNA与工艺DNA混合
   var hasUpload=Object.keys(currentDNA).length>0;
   if(hasUpload){
     var blended={};
@@ -400,8 +450,6 @@ function selectCraftFromLibrary(cid){
     currentDNA=JSON.parse(JSON.stringify(craft.dna));
   }
   renderDNA(currentDNA);
-
-  // 显示工艺+分析信息
   document.getElementById('card-analysis').style.display='block';
   var h='<div class="row"><span class="k">工艺</span><span class="v">'+craft.name+'</span></div>'+
     '<div class="row"><span class="k">特点</span><span class="v">'+craft.craft_traits+'</span></div>'+
@@ -442,15 +490,97 @@ function handleFile(file){
   reader.readAsDataURL(file);
 }
 
+// 从图片canvas提取色彩特征（演示模式fallback）
+function canvasAnalyze(imgDataUrl,callback){
+  var img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=function(){
+    var c=document.createElement('canvas');
+    var sz=64;
+    c.width=sz;c.height=sz;
+    var ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0,sz,sz);
+    var data=ctx.getImageData(0,0,sz,sz).data;
+    var rT=0,gT=0,bT=0,cnt=0;
+    var buckets={};
+    for(var i=0;i<data.length;i+=4){
+      var r=data[i],g=data[i+1],b=data[i+2];
+      rT+=r;gT+=g;bT+=b;cnt++;
+      var qr=Math.round(r/64)*64,qg=Math.round(g/64)*64,qb=Math.round(b/64)*64;
+      var key=qr+','+qg+','+qb;
+      buckets[key]=(buckets[key]||0)+1;
+    }
+    var avgR=rT/cnt,avgG=gT/cnt,avgB=bT/cnt;
+    var warmth=Math.round(avgR/(avgB+1)*80);
+    warmth=Math.max(10,Math.min(90,warmth));
+    var spread=Math.max(avgR,avgG,avgB)-Math.min(avgR,avgG,avgB);
+    var sat=Math.round(spread/2.55);
+    sat=Math.max(10,Math.min(90,sat));
+    var lum=Math.round((avgR*0.299+avgG*0.587+avgB*0.114)/2.55);
+    var sorted=Object.keys(buckets).sort(function(a,b){return buckets[b]-buckets[a]});
+    var domColors=[];
+    for(var i=0;i<Math.min(5,sorted.length);i++){
+      var parts=sorted[i].split(',');
+      var hex='#'+parseInt(parts[0]).toString(16).padStart(2,'0')+parseInt(parts[1]).toString(16).padStart(2,'0')+parseInt(parts[2]).toString(16).padStart(2,'0');
+      domColors.push({hex:hex,percent:Math.round(buckets[sorted[i]]/cnt*100)});
+    }
+    var dna={
+      color_warmth:warmth,saturation:sat,
+      pattern_complex:Math.round(40+spread/4),
+      texture_feel:Math.round(30+Math.random()*40),
+      style_modern:warmth>60?35:65,
+      material_weight:Math.round(30+lum/3),
+      luminosity:lum,
+      organic_ratio:Math.round(50+Math.random()*30)
+    };
+    var mood=warmth>60&&sat>60?'热烈':warmth>60?'温馨':sat<40?'宁静':'现代';
+    var style=warmth>60?'东方':'极简';
+    var colorDesc='主色'+domColors[0].hex;
+    if(domColors.length>1)colorDesc+='，辅色'+domColors[1].hex;
+    var ich=warmth<40?'蓝印花布':sat>70?'板鹞风筝':'扎染';
+    var analysis={
+      subject:style+'风格图像',mood:mood,style:style,
+      color_desc:colorDesc,pattern_type:spread>80?'丰富色彩':'和谐配色',
+      ich_suggestion:ich,textile_prompt:'high quality textile curtain fabric design, '+mood+' mood, '+style+' style, studio lighting, 8k'
+    };
+    callback(dna,analysis,domColors);
+  };
+  img.src=imgDataUrl;
+}
+
 function doAnalyze(file){
   document.getElementById('st').textContent='解码中...';
-  var fd=new FormData();fd.append('image',file);
-  fetch(API+'/api/analyze',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
-    document.getElementById('st').textContent='就绪';
-    if(d.aesthetic_dna){currentDNA=d.aesthetic_dna;renderDNA(d.aesthetic_dna);renderPalette(d.cv_features);}
-    if(d.ai_analysis){currentAnalysis=d.ai_analysis;renderAnalysis(d.ai_analysis);}
-    if(d.craft_recommendations){renderCraftRec(d.craft_recommendations);}
-  }).catch(function(){document.getElementById('st').textContent='就绪';});
+  if(!demoMode){
+    var fd=new FormData();fd.append('image',file);
+    fetch(API+'/api/analyze',{method:'POST',body:fd}).then(function(r){
+      if(!r.ok)throw 0;return r.json()}).then(function(d){
+      document.getElementById('st').textContent='就绪';
+      if(d.aesthetic_dna){currentDNA=d.aesthetic_dna;renderDNA(d.aesthetic_dna);renderPalette(d.cv_features);}
+      if(d.ai_analysis){currentAnalysis=d.ai_analysis;renderAnalysis(d.ai_analysis);}
+      if(d.craft_recommendations){renderCraftRec(d.craft_recommendations);}
+    }).catch(function(){fallbackAnalyze();});
+  }else{
+    fallbackAnalyze();
+  }
+}
+
+function fallbackAnalyze(){
+  canvasAnalyze(currentImage,function(dna,analysis,domColors){
+    currentDNA=dna;currentAnalysis=analysis;
+    renderDNA(dna);renderAnalysis(analysis);
+    renderPalette({color:{dominant_colors:domColors}});
+    var matches=[];
+    for(var i=0;i<CRAFTS.length;i++){
+      var c=CRAFTS[i],dist=0;
+      var keys=['color_warmth','saturation','pattern_complex','texture_feel','style_modern','organic_ratio'];
+      for(var j=0;j<keys.length;j++)dist+=Math.abs((dna[keys[j]]||50)-(c.dna[keys[j]]||50));
+      var score=Math.round(Math.max(0,Math.min(100,70-dist/3+(100-dist/6)/5)));
+      matches.push({craft_id:c.id,craft_name:c.name,match_score:score});
+    }
+    matches.sort(function(a,b){return b.match_score-a.match_score});
+    renderCraftRec(matches);
+    document.getElementById('st').textContent=demoMode?'演示模式':'就绪';
+  });
 }
 
 function renderAnalysis(ai){
@@ -489,7 +619,7 @@ function renderCraftRec(recs){
   for(var i=0;i<recs.length&&i<3;i++){var r=recs[i],craft=CRAFTS.find(function(c){return c.id===r.craft_id});
     if(!craft)continue;
     h+='<div class="craft-item" data-cid="'+r.craft_id+'">';
-    h+='<img src="'+craft.image+'" alt="'+craft.name+'">';
+    h+='<img src="'+craft.image+'" alt="'+craft.name+'" onerror="this.style.background=\'var(--paper2)\'">';
     h+='<div class="ci-body"><div class="ci-name">'+craft.name+'</div><div class="ci-meta">'+craft.level+'</div>';
     h+='<div class="ci-score">匹配度 '+r.match_score+'%</div></div></div>';}
   el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">无匹配</p>';
@@ -519,34 +649,54 @@ function doTranslate(){
   prog.classList.add('on');document.getElementById('prog-fill').style.width='0';
   document.getElementById('st').textContent='翻译中...';
   var prompt='';
-  if(currentAnalysis&&currentAnalysis.textile_prompt){
-    prompt=currentAnalysis.textile_prompt;
-  }else if(selectedCraft){
-    var craft=CRAFTS.find(function(c){return c.id===selectedCraft});
-    prompt=craft?craft.prompt_core:'high quality textile curtain fabric design';
+  if(currentAnalysis&&currentAnalysis.textile_prompt){prompt=currentAnalysis.textile_prompt;}
+  else if(selectedCraft){var craft=CRAFTS.find(function(c){return c.id===selectedCraft});prompt=craft?craft.prompt_core:'high quality textile curtain fabric design';}
+  else{prompt='high quality textile curtain fabric design';}
+  var pw=0;
+  var pInterval=setInterval(function(){pw=Math.min(pw+Math.random()*8,85);document.getElementById('prog-fill').style.width=pw+'%';},300);
+  if(!demoMode){
+    fetch(API+'/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:selectedMode,base_prompt:prompt,dna:currentDNA,craft_id:selectedCraft})
+    }).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+      clearInterval(pInterval);
+      btn.classList.remove('loading');btn.innerHTML='TRANSLATE &mdash; 翻译生成';
+      prog.classList.remove('on');document.getElementById('st').textContent='就绪';
+      if(d.success){
+        var canvas=document.getElementById('canvas');
+        canvas.innerHTML='<img src="'+d.image_url+'">';
+        if(d.note)canvas.innerHTML+='<div style="padding:12px;font-size:11px;color:var(--ink3);text-align:center;font-style:italic">'+d.note+'</div>';
+        doTrendValidate();loadRecent();
+      }else alert('失败: '+d.error);
+    }).catch(function(){demoTranslate(prompt,pInterval,btn,prog);});
   }else{
-    prompt='high quality textile curtain fabric design';
+    demoTranslate(prompt,pInterval,btn,prog);
   }
-  fetch(API+'/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({mode:selectedMode,base_prompt:prompt,dna:currentDNA,craft_id:selectedCraft})
-  }).then(function(r){return r.json()}).then(function(d){
-    btn.classList.remove('loading');btn.innerHTML='TRANSLATE &mdash; 翻译生成';
-    prog.classList.remove('on');document.getElementById('st').textContent='就绪';
-    if(d.success){
+}
+
+function demoTranslate(prompt,pInterval,btn,prog){
+  setTimeout(function(){
+    clearInterval(pInterval);
+    document.getElementById('prog-fill').style.width='100%';
+    setTimeout(function(){
+      btn.classList.remove('loading');btn.innerHTML='TRANSLATE &mdash; 翻译生成';
+      prog.classList.remove('on');
+      document.getElementById('st').textContent=demoMode?'演示模式':'就绪';
+      var craft=null;
+      if(selectedCraft)craft=CRAFTS.find(function(c){return c.id===selectedCraft});
+      if(!craft)craft=CRAFTS[0];
       var canvas=document.getElementById('canvas');
-      canvas.innerHTML='<img src="'+d.image_url+'">';
-      if(d.note)canvas.innerHTML+='<div style="padding:12px;font-size:11px;color:var(--ink3);text-align:center;font-style:italic">'+d.note+'</div>';
-      doTrendValidate();loadRecent();
-    }else alert('失败: '+d.error);
-  }).catch(function(e){
-    btn.classList.remove('loading');btn.innerHTML='TRANSLATE &mdash; 翻译生成';
-    prog.classList.remove('on');document.getElementById('st').textContent='就绪';alert('请求失败');
-  });
+      canvas.innerHTML='<img src="'+craft.image+'" onerror="this.parentElement.innerHTML=\'<div class=ph><div class=big>AT</div><p>非遗参考：'+craft.name+'</p><p style=font-size:11px;color:var(--ink4)>启动后端可体验AI生图</p></div>\'">'
+        +'<div style="padding:12px;font-size:11px;color:var(--ink3);text-align:center;font-style:italic">演示模式：展示'+craft.name+'非遗参考作品 · 启动后端服务可体验AI实时生图</div>';
+      var el=document.getElementById('trend-box');
+      el.innerHTML='<div class="trend-item"><div class="score">87</div><div class="tinfo"><div class="tname">新中式国风</div><div class="tmeta">匹配 92%</div></div><span class="lc lc-em">萌芽</span></div>'
+        +'<div class="trend-item"><div class="score">79</div><div class="tinfo"><div class="tname">自然有机</div><div class="tmeta">匹配 85%</div></div><span class="lc lc-gr">增长</span></div>'
+        +'<div class="trend-item"><div class="score">72</div><div class="tinfo"><div class="tname">复古蓝调</div><div class="tmeta">匹配 78%</div></div><span class="lc lc-ma">成熟</span></div>';
+    },400);
+  },1500+Math.random()*1000);
 }
 
 function doTrendValidate(){
-  fetch(API+'/api/trend_validate',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({})
+  fetch(API+'/api/trend_validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})
   }).then(function(r){return r.json()}).then(function(d){
     var el=document.getElementById('trend-box'),h='',m=d.matches||[];
     if(!m.length){el.innerHTML='<p style="font-size:12px;color:var(--ink4)">趋势引擎未连接</p>';return;}
@@ -555,7 +705,7 @@ function doTrendValidate(){
       var lc=m[i].lifecycle==='emerging'?'萌芽':m[i].lifecycle==='growth'?'增长':'成熟';
       h+='<div class="trend-item"><div class="score">'+m[i].trend_score+'</div><div class="tinfo"><div class="tname">'+m[i].trend_name+'</div><div class="tmeta">匹配 '+m[i].confidence+'%</div></div><span class="lc '+cls+'">'+lc+'</span></div>';}
     el.innerHTML=h;
-  });
+  }).catch(function(){});
 }
 
 function loadRecent(){
@@ -564,7 +714,7 @@ function loadRecent(){
     for(var i=0;i<list.length&&i<5;i++){
       h+='<div class="hist"><img src="'+list[i].img_url+'" alt=""><div class="hinfo"><div class="hmode">'+(list[i].craft_name||list[i].mode||'')+'</div><div class="htime">'+(list[i].created_at||'').slice(0,16)+'</div></div></div>';}
     el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">暂无</p>';
-  });
+  }).catch(function(){});
 }
 
 function loadHistory(){
@@ -574,8 +724,8 @@ function loadHistory(){
     var el=document.getElementById('full-history'),h='';
     for(var i=0;i<list.length;i++){
       h+='<div class="hist"><img src="'+list[i].img_url+'" alt="" style="width:70px;height:70px"><div class="hinfo"><div class="hmode">'+(list[i].craft_name||list[i].mode||'')+'</div><div class="htime">'+(list[i].created_at||'').slice(0,16)+'</div></div></div>';}
-    el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">暂无</p>';
-  });
+    el.innerHTML=h||'<p style="font-size:12px;color:var(--ink4)">暂无历史</p>';
+  }).catch(function(){});
 }
 </script>
 </body>
