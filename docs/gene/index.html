@@ -752,6 +752,31 @@ var API='/gene';
 var DIMS={},PRESETS={},TSEEDS=[];
 var currentDNA={};
 var breedTarget='';
+var demoMode=false;
+
+// 内嵌fallback数据
+var EMBEDDED_DIMS={
+  color_warmth:{name:"色彩温度",icon:"🌡️",min:0,max:100,labels:["冷调","暖调"]},
+  saturation:{name:"饱和度",icon:"🎨",min:0,max:100,labels:["素雅","艳丽"]},
+  pattern_complex:{name:"图案复杂度",icon:"🔮",min:0,max:100,labels:["极简","繁复"]},
+  texture_feel:{name:"织物肌理",icon:"🧵",min:0,max:100,labels:["光滑","粗糙"]},
+  style_modern:{name:"风格倾向",icon:"✨",min:0,max:100,labels:["传统","现代"]},
+  material_weight:{name:"材质厚薄",icon:"⚖️",min:0,max:100,labels:["轻薄","厚重"]},
+  luminosity:{name:"光泽度",icon:"💡",min:0,max:100,labels:["哑光","高光"]},
+  organic_ratio:{name:"自然感",icon:"🌿",min:0,max:100,labels:["人工","天然"]}
+};
+var EMBEDDED_PRESETS={
+  blue_calico:{name:"蓝印花布",desc:"靛蓝防染，蓝白素雅",color:"#2c4a6e",dna:{color_warmth:30,saturation:35,pattern_complex:70,texture_feel:55,style_modern:20,material_weight:45,luminosity:15,organic_ratio:85}},
+  tie_dye:{name:"扎染",desc:"自然晕染，有机纹理",color:"#4a6e8b",dna:{color_warmth:40,saturation:50,pattern_complex:45,texture_feel:40,style_modern:40,material_weight:35,luminosity:25,organic_ratio:90}},
+  shen_embroidery:{name:"沈绣",desc:"仿真绣法，丝线光影",color:"#c9a96e",dna:{color_warmth:55,saturation:60,pattern_complex:85,texture_feel:30,style_modern:35,material_weight:25,luminosity:55,organic_ratio:70}},
+  tubu_weaving:{name:"土布纺织",desc:"手工纺纱，质朴厚实",color:"#8b7355",dna:{color_warmth:55,saturation:20,pattern_complex:25,texture_feel:80,style_modern:15,material_weight:65,luminosity:10,organic_ratio:95}},
+  silk_weaving:{name:"丝绸织造",desc:"提花织造，华丽光泽",color:"#d4a574",dna:{color_warmth:65,saturation:70,pattern_complex:80,texture_feel:20,style_modern:25,material_weight:40,luminosity:80,organic_ratio:50}},
+  kite_pattern:{name:"板鹞风筝",desc:"几何骨架，浓烈色彩",color:"#e06040",dna:{color_warmth:60,saturation:85,pattern_complex:75,texture_feel:30,style_modern:40,material_weight:20,luminosity:60,organic_ratio:45}}
+};
+var EMBEDDED_TSEEDS=[
+  {gene:"blue_calico",momentum:72},{gene:"tie_dye",momentum:65},{gene:"shen_embroidery",momentum:80},
+  {gene:"tubu_weaving",momentum:55},{gene:"silk_weaving",momentum:68},{gene:"kite_pattern",momentum:58}
+];
 
 // ===== Init =====
 window.addEventListener('DOMContentLoaded',function(){
@@ -762,18 +787,24 @@ window.addEventListener('DOMContentLoaded',function(){
 });
 
 function loadAll(){
-  Promise.all([
-    fetch(API+'/api/genome').then(function(r){return r.json()}),
-    fetch(API+'/api/presets').then(function(r){return r.json()}),
-    fetch(API+'/api/trend_seeds').then(function(r){return r.json()})
-  ]).then(function(a){
-    DIMS=a[0].dimensions||{};
-    PRESETS=a[1].presets||{};
-    TSEEDS=a[2].seeds||[];
-    renderPresets();
-    renderSliders();
-    renderBreedSelect();
-  }).catch(function(e){console.error('Load failed:',e)});
+  fetch(API+'/api/genome').then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+    DIMS=d.dimensions||EMBEDDED_DIMS;
+    return fetch(API+'/api/presets');
+  }).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+    PRESETS=d.presets||EMBEDDED_PRESETS;
+    return fetch(API+'/api/trend_seeds');
+  }).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+    TSEEDS=d.seeds||EMBEDDED_TSEEDS;
+    renderPresets();renderSliders();renderBreedSelect();
+  }).catch(function(){
+    demoMode=true;
+    DIMS=EMBEDDED_DIMS;PRESETS=EMBEDDED_PRESETS;TSEEDS=EMBEDDED_TSEEDS;
+    renderPresets();renderSliders();renderBreedSelect();
+    var bar=document.createElement('div');
+    bar.style.cssText='background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:10px;padding:12px 20px;margin:16px 0;font-size:12px;color:#00e5a0;text-align:center';
+    bar.innerHTML='🧬 演示模式 — DNA编辑和预设可用，AI生图需启动后端服务';
+    document.querySelector('.container').insertBefore(bar,document.querySelector('.container').children[1]);
+  });
 }
 
 function setupNav(){
@@ -941,15 +972,27 @@ function doGenerate(){
     btn.innerHTML='<span>GENERATE</span><span style="font-size:11px;opacity:.7">生成织物设计</span>';
     prog.classList.remove('show');
     document.getElementById('status-text').textContent='引擎就绪';
-    alert('请求失败: '+e.message);
+    if(demoMode){alert('🧬 演示模式下AI生图不可用\n\n请在本地环境启动织觉引擎后使用完整功能。');}
+    else{alert('请求失败: '+e.message);}
   });
 }
 
 function doMutate(){
   var intensity=parseInt(document.getElementById('mutate-intensity').value);
+  if(demoMode){
+    // 演示模式：本地随机变异
+    var mutated={};
+    for(var k in currentDNA){
+      var delta=Math.round((Math.random()-0.5)*intensity*0.6);
+      mutated[k]=Math.max(0,Math.min(100,currentDNA[k]+delta));
+    }
+    updateDNA(mutated);
+    return;
+  }
   fetch(API+'/api/mutate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dna:currentDNA,intensity:intensity})})
   .then(function(r){return r.json()})
-  .then(function(d){if(d.dna)updateDNA(d.dna)});
+  .then(function(d){if(d.dna)updateDNA(d.dna)})
+  .catch(function(){if(demoMode)alert('演示模式下变异功能已使用本地模拟');});
 }
 
 function doReset(){
@@ -961,11 +1004,20 @@ function doReset(){
 
 function doBreed(){
   if(!breedTarget||!PRESETS[breedTarget])return;
+  if(demoMode){
+    // 演示模式：本地交叉
+    var parentA=currentDNA,parentB=PRESETS[breedTarget].dna,child={};
+    for(var k in parentA){child[k]=Math.round(parentA[k]*0.5+parentB[k]*0.5);}
+    updateDNA(child);
+    document.getElementById('breed-modal').classList.remove('show');
+    return;
+  }
   fetch(API+'/api/breed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parent_a:currentDNA,parent_b:PRESETS[breedTarget].dna,ratio:0.5})})
   .then(function(r){return r.json()})
   .then(function(d){
     if(d.dna){updateDNA(d.dna);document.getElementById('breed-modal').classList.remove('show');}
-  });
+  })
+  .catch(function(){});
 }
 
 // ===== Breed Select =====

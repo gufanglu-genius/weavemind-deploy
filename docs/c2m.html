@@ -453,7 +453,7 @@ async function generateDesign() {
     document.getElementById('btn2').disabled = false;
   } catch(e) {
     hideLoading();
-    alert('⚠️ 生成失败: ' + e.message + '\n\n请确认基因编辑器服务(port:5003)已启动。');
+    alert('⚠️ 生成失败: ' + e.message + '\n\n此功能需要后端AI服务支持，请在本地环境启动织觉引擎后使用。');
   }
 }
 
@@ -518,7 +518,7 @@ async function generatePreview() {
     goStep(4);
   } catch(e) {
     hideLoading();
-    alert('生成失败: ' + e.message + '\n\n请确认空间感知引擎(port:5001)已启动。');
+    alert('生成失败: ' + e.message + '\n\n此功能需要后端AI服务支持，请在本地环境启动织觉引擎后使用。');
   }
 }
 
