@@ -1822,6 +1822,28 @@ const S = {
     custom: null,
     resultFilename: null   // 用于下载
 };
+let demoMode = false;
+
+// 内嵌纺织品数据
+const EMBEDDED_TEXTILES = [
+    {id:'chinese_ink',name:'水墨江南',description:'传统水墨意境，淡雅留白'},
+    {id:'nordic_minimal',name:'北欧极简',description:'纯净线条，自然质感'},
+    {id:'japanese_wabi',name:'侘寂之美',description:'不完美中的完美，朴素禅意'},
+    {id:'french_roma',name:'法式浪漫',description:'优雅花纹，精致生活'},
+    {id:'modern_abstract',name:'现代艺术',description:'大胆色块，前卫表达'},
+    {id:'luxury_velvet',name:'奢华丝绒',description:'深沉质感，高贵气质'}
+];
+
+// 演示模式检测
+fetch('./api/textiles').then(r => { if(!r.ok) throw 0; return r.json(); }).catch(() => {
+    demoMode = true;
+    const bar = document.createElement('div');
+    bar.style.cssText = 'background:rgba(107,189,138,.06);border:1px solid rgba(107,189,138,.15);border-radius:10px;padding:14px 20px;margin:16px;font-size:12px;color:#6bbd8a;line-height:1.8;text-align:left;max-width:900px;margin:16px auto';
+    bar.innerHTML = `<b style="font-size:13px">🏠 空间感知 · Demo模式</b><br>
+      <span style="color:var(--text-secondary)">可用功能：</span>上传房间照片、选择花型面料、Canvas合成预览、搭配评分<br>
+      <span style="color:var(--text-secondary)">受限功能：</span>AI生成房间场景、AI智能合成窗帘效果需启动后端服务（本地运行织觉引擎）`;
+    document.querySelector('.step-nav')?.parentNode?.insertBefore(bar, document.querySelector('.step-nav'));
+});
 
 /* ═══════════════ 工具 ═══════════════ */
 const $ = s => document.getElementById(s);
@@ -1874,9 +1896,21 @@ fileIn.onchange = e => { if(e.target.files.length) upload(e.target.files[0]); };
 
 async function upload(file) {
     if(file.size > 16 * 1024 * 1024) return toast('文件超过16MB限制','error');
-    const fd = new FormData(); fd.append('file', file);
     toast('上传中...');
+    if(demoMode) {
+        // 演示模式：直接读取本地文件
+        const reader = new FileReader();
+        reader.onload = e => {
+            S.room = file.name;
+            S.roomUrl = e.target.result;
+            toast(`已加载 (${(file.size/1024).toFixed(0)}KB)`,'success');
+            syncS1();
+        };
+        reader.readAsDataURL(file);
+        return;
+    }
     try {
+        const fd = new FormData(); fd.append('file', file);
         const r = await fetch('./api/upload-room', { method:'POST', body:fd });
         const d = await r.json();
         if(d.success) {
@@ -1901,6 +1935,18 @@ async function doStep1() {
         btn.disabled = true;
         btn.textContent = '生成中...';
         toast('AI 正在生成房间场景...');
+        if(demoMode) {
+            // 演示模式：使用示例房间图
+            await new Promise(r => setTimeout(r, 800));
+            S.room = 'demo_room.png';
+            S.roomUrl = '../assets/room-real.png';
+            toast('已加载示例房间','success');
+            loadTextiles();
+            goStep(2);
+            btn.disabled = false;
+            btn.textContent = '下一步 →';
+            return;
+        }
         try {
             const r = await fetch('./api/generate-room', {
                 method:'POST',
@@ -1926,25 +1972,29 @@ async function doStep1() {
 
 /* ═══════════════ 步骤2 ═══════════════ */
 async function loadTextiles() {
-    try {
-        const r = await fetch('./api/textiles');
-        const d = await r.json();
-        const colors = {chinese_ink:'#2a2a2a',nordic_minimal:'#2a3a2a',japanese_wabi:'#3a3020',french_roma:'#3a2028',modern_abstract:'#1a2a3a',luxury_velvet:'#1a3a2a'};
-        $('textileGrid').innerHTML = d.textiles.map(t => `
-            <div class="textile-card" onclick="pickTextile(this,'${t.id}')" data-id="${t.id}">
-                <img class="textile-img" src="../assets/textiles/${t.id}.png" alt="${t.name}"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-                <div style="display:none;height:200px;background:${colors[t.id]||'var(--bg-elevated)'}"></div>
-                <div class="textile-body">
-                    <div class="textile-name">${t.name}</div>
-                    <div class="textile-desc">${t.description}</div>
-                </div>
-                <div class="textile-badge">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
+    const colors = {chinese_ink:'#2a2a2a',nordic_minimal:'#2a3a2a',japanese_wabi:'#3a3020',french_roma:'#3a2028',modern_abstract:'#1a2a3a',luxury_velvet:'#1a3a2a'};
+    let textiles = EMBEDDED_TEXTILES;
+    if(!demoMode) {
+        try {
+            const r = await fetch('./api/textiles');
+            const d = await r.json();
+            if(d.textiles) textiles = d.textiles;
+        } catch { /* fallback to embedded */ }
+    }
+    $('textileGrid').innerHTML = textiles.map(t => `
+        <div class="textile-card" onclick="pickTextile(this,'${t.id}')" data-id="${t.id}">
+            <img class="textile-img" src="../assets/textiles/${t.id}.png" alt="${t.name}"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+            <div style="display:none;height:200px;background:${colors[t.id]||'var(--bg-elevated)'}"></div>
+            <div class="textile-body">
+                <div class="textile-name">${t.name}</div>
+                <div class="textile-desc">${t.description}</div>
             </div>
-        `).join('');
-    } catch { toast('加载纺织品列表失败','error'); }
+            <div class="textile-badge">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+        </div>
+    `).join('');
 }
 
 function pickTextile(el, id) {
@@ -1994,10 +2044,35 @@ async function doStep2() {
     timerInterval = setInterval(() => {
         elapsed++;
         $('timer').textContent = elapsed + 's';
-        // 进度条：预期30秒，到90%后减速
         const pct = Math.min(90, (elapsed / 30) * 90);
         $('progBar').style.width = pct + '%';
     }, 1000);
+
+    if(demoMode) {
+        // 演示模式：canvas合成预览
+        const textileId = S.textile || 'chinese_ink';
+        const textileSrc = `../assets/textiles/${textileId}.png`;
+        try {
+            const resultUrl = await canvasComposite(S.roomUrl, textileSrc);
+            await new Promise(r => setTimeout(r, 1500));
+            clearInterval(timerInterval);
+            $('progBar').style.width = '100%';
+            S.resultFilename = 'demo_preview.png';
+            $('resultImg').src = resultUrl;
+            $('resultImg').classList.add('visible');
+            $('resultEmpty').style.display = 'none';
+            $('dlBtn').classList.add('visible');
+            toast(`预览完成 · 演示合成 · ${elapsed}s`, 'success');
+            // 演示评分
+            showDemoScore();
+            $('loader').classList.remove('visible');
+        } catch(e) {
+            clearInterval(timerInterval);
+            toast('合成失败','error');
+            $('loader').classList.remove('visible');
+        }
+        return;
+    }
 
     try {
         const body = S.custom
@@ -2020,14 +2095,9 @@ async function doStep2() {
             $('resultImg').classList.add('visible');
             $('resultEmpty').style.display = 'none';
             $('dlBtn').classList.add('visible');
-
-            // 显示生成模式
             const modeText = d.mode === 'edit' ? '图片编辑' : 'AI生成';
             toast(`预览完成 · ${modeText} · ${elapsed}s`, 'success');
-
-            // 从后端获取真实评分
             await fetchScore();
-            // 刷新历史
             loadHistory();
         } else {
             toast(d.error, 'error');
@@ -2039,6 +2109,76 @@ async function doStep2() {
         $('resultEmpty').style.display = 'flex';
     }
     $('loader').classList.remove('visible');
+}
+
+/* ═══════════════ Canvas合成预览（演示模式） ═══════════════ */
+function canvasComposite(roomSrc, textileSrc) {
+    return new Promise((resolve, reject) => {
+        const roomImg = new Image();
+        roomImg.crossOrigin = 'anonymous';
+        roomImg.onload = () => {
+            const textileImg = new Image();
+            textileImg.crossOrigin = 'anonymous';
+            textileImg.onload = () => {
+                const c = document.createElement('canvas');
+                const w = roomImg.naturalWidth;
+                const h = roomImg.naturalHeight;
+                c.width = w; c.height = h;
+                const ctx = c.getContext('2d');
+                // 画房间
+                ctx.drawImage(roomImg, 0, 0, w, h);
+                // 在右侧区域叠加花型（模拟窗帘位置）
+                ctx.save();
+                ctx.globalAlpha = 0.65;
+                // 窗帘区域：右侧40%，居中60%高度
+                const tx = w * 0.55, ty = h * 0.12;
+                const tw = w * 0.38, th = h * 0.72;
+                // 创建梯形裁剪（模拟窗帘褶皱）
+                ctx.beginPath();
+                ctx.moveTo(tx, ty);
+                ctx.lineTo(tx + tw, ty + th * 0.05);
+                ctx.lineTo(tx + tw * 0.95, ty + th);
+                ctx.lineTo(tx + tw * 0.05, ty + th * 0.95);
+                ctx.closePath();
+                ctx.clip();
+                // 平铺花型
+                const pattern = ctx.createPattern(textileImg, 'repeat');
+                ctx.fillStyle = pattern;
+                ctx.fillRect(tx, ty, tw, th);
+                ctx.restore();
+                // 轻微暗角
+                const grad = ctx.createRadialGradient(w/2, h/2, w*0.3, w/2, h/2, w*0.7);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, 'rgba(0,0,0,0.15)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+                resolve(c.toDataURL('image/png'));
+            };
+            textileImg.onerror = reject;
+            textileImg.src = textileSrc;
+        };
+        roomImg.onerror = reject;
+        roomImg.src = roomSrc;
+    });
+}
+
+function showDemoScore() {
+    const score = 82 + Math.floor(Math.random() * 10);
+    $('scoreCard').classList.add('visible');
+    $('scoreNum').textContent = score;
+    setTimeout(() => { $('scoreBar').style.width = score + '%'; }, 100);
+    const numEl = $('scoreNum');
+    if(score >= 85) numEl.style.background = 'linear-gradient(135deg, var(--gold-200), var(--gold-400))';
+    else numEl.style.background = 'linear-gradient(135deg, var(--blue), var(--jade))';
+    numEl.style.webkitBackgroundClip = 'text';
+    numEl.style.webkitTextFillColor = 'transparent';
+    const textileId = S.textile || 'chinese_ink';
+    const tName = EMBEDDED_TEXTILES.find(t => t.id === textileId)?.name || '自定义';
+    $('scoreTips').innerHTML = [
+        `${tName}风格与空间氛围协调`,
+        '色彩搭配和谐，建议增加暖色点缀',
+        '面料质感与家具风格匹配度良好'
+    ].map(t => `<li class="score-tip">${t}</li>`).join('');
 }
 
 /* ═══════════════ 评分（后端） ═══════════════ */
@@ -2109,6 +2249,15 @@ function toggleHistory() {
 }
 
 async function loadHistory() {
+    if(demoMode) {
+        $('histBody').innerHTML = `
+            <div class="history-empty">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--text-muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.35;margin-bottom:12px"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+                <div>演示模式</div>
+                <div style="font-size:12px;margin-top:4px;color:var(--text-muted)">启动后端可保存历史记录</div>
+            </div>`;
+        return;
+    }
     try {
         const r = await fetch('./api/history?limit=20');
         const d = await r.json();

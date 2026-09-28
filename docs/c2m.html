@@ -336,6 +336,19 @@ let selectedTrend = null;
 let selectedRoom = 'modern';
 let selectedTextile = 'chinese_ink';
 let startTime = 0;
+let demoMode = false;
+
+// 演示模式检测
+fetch('/gene/api/genome').then(r => { if(!r.ok) throw 0; }).catch(() => {
+    demoMode = true;
+    const bar = document.createElement('div');
+    bar.style.cssText = 'background:rgba(139,105,20,.06);border:1px solid rgba(139,105,20,.15);border-radius:10px;padding:14px 20px;margin:16px auto;font-size:12px;color:#8b6914;line-height:1.8;text-align:left;max-width:900px';
+    bar.innerHTML = `<b style="font-size:13px">✨ C2M消费体验 · Demo模式</b><br>
+      <span style="color:var(--fg)">可用功能：</span>选择风格趋势、调节审美DNA、选择花型与空间类型、Canvas合成预览<br>
+      <span style="color:var(--fg)">受限功能：</span>AI花型生成、AI房间生成、AI窗帘合成效果需启动后端服务`;
+    const nav = document.querySelector('.unified-nav');
+    if(nav && nav.nextSibling) nav.parentNode.insertBefore(bar, nav.nextSibling);
+});
 
 // 初始化
 function init() {
@@ -415,8 +428,34 @@ async function generateDesign() {
   showLoading('AI正在根据你的审美DNA生成花型设计...');
   startTime = Date.now();
 
+  if(demoMode) {
+    // 演示模式：使用匹配的非遗参考图
+    await new Promise(r => setTimeout(r, 1200));
+    hideLoading();
+    var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    // 根据DNA选择最匹配的非遗工艺图
+    var warmth = currentDNA.color_warmth || 50;
+    var sat = currentDNA.saturation || 50;
+    var craftId = warmth < 40 ? 'blue_calico' : sat > 70 ? 'kite_pattern' : warmth > 60 ? 'silk_weaving' : 'tie_dye';
+    var craftNames = {blue_calico:'蓝印花布',tie_dye:'扎染',shen_embroidery:'沈绣',silk_weaving:'丝绸织造',kite_pattern:'板鹞风筝'};
+    var previewWrap = document.getElementById('patternPreview');
+    var img = document.getElementById('patternImg');
+    img.src = 'references/nantong-ich/nantong_' + craftId + '.png';
+    document.getElementById('patternTime').textContent = '耗时: ' + elapsed + 's（演示）';
+    previewWrap.classList.add('show');
+    var dimKeys = ['color_warmth','saturation','pattern_complex','texture_feel','style_modern','material_weight','luminosity','organic_ratio'];
+    var dimNames = ['色温','饱和度','复杂度','肌理','风格','厚薄','光泽','自然感'];
+    var miniHtml = '';
+    for(var i=0; i<dimKeys.length; i++){
+      miniHtml += '<div class="dna-mini-item"><span class="dm-val">' + (currentDNA[dimKeys[i]]||50) + '</span><span class="dm-label">' + dimNames[i] + '</span></div>';
+    }
+    document.getElementById('dnaMiniChart').innerHTML = miniHtml;
+    previewWrap.scrollIntoView({behavior:'smooth', block:'center'});
+    document.getElementById('btn2').disabled = false;
+    return;
+  }
+
   try {
-    // 调用基因编辑器后端生成图片（后端已内置轮询，会阻塞直到图片就绪）
     var resp = await fetch('/gene/api/generate', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -431,14 +470,12 @@ async function generateDesign() {
     hideLoading();
     var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    // 显示生成的图片
     var previewWrap = document.getElementById('patternPreview');
     var img = document.getElementById('patternImg');
     img.src = '/gene' + data.image_url;
     document.getElementById('patternTime').textContent = '耗时: ' + elapsed + 's';
     previewWrap.classList.add('show');
 
-    // 显示DNA迷你图
     var dimKeys = ['color_warmth','saturation','pattern_complex','texture_feel','style_modern','material_weight','luminosity','organic_ratio'];
     var dimNames = ['色温','饱和度','复杂度','肌理','风格','厚薄','光泽','自然感'];
     var miniHtml = '';
@@ -447,7 +484,6 @@ async function generateDesign() {
     }
     document.getElementById('dnaMiniChart').innerHTML = miniHtml;
 
-    // 滚动到预览区域
     previewWrap.scrollIntoView({behavior:'smooth', block:'center'});
 
     document.getElementById('btn2').disabled = false;
@@ -461,8 +497,41 @@ async function generatePreview() {
   showLoading('AI正在生成空间搭配预览...');
   var previewStart = Date.now();
 
+  if(demoMode) {
+    // 演示模式：canvas合成
+    showLoading('正在合成搭配预览...');
+    await new Promise(r => setTimeout(r, 1500));
+    var elapsed = ((Date.now() - previewStart) / 1000).toFixed(1);
+    // canvas合成
+    var roomSrc = 'assets/room-real.png';
+    var textileSrc = 'assets/textiles/' + selectedTextile + '.png';
+    try {
+      var resultUrl = await c2mCanvasComposite(roomSrc, textileSrc);
+    } catch(e) {
+      resultUrl = '';
+    }
+    hideLoading();
+    var score = 82 + Math.floor(Math.random() * 10);
+    document.getElementById('resultScore').textContent = score + '分';
+    document.getElementById('resultTime').textContent = elapsed + 's（演示）';
+    var trendName = selectedTrend ? selectedTrend.name : '自定义';
+    var roomName = {modern:'现代客厅',bedroom:'温馨卧室',chinese:'中式雅居',nordic:'北欧风格'}[selectedRoom];
+    var texName = {chinese_ink:'水墨江南',nordic_minimal:'北欧极简',japanese_wabi:'侘寂之美',french_roma:'法式浪漫',modern_abstract:'现代艺术',luxury_velvet:'奢华丝绒'}[selectedTextile];
+    var previewImgHtml = resultUrl
+      ? '<img src="' + resultUrl + '" style="max-width:100%;border-radius:12px;margin-bottom:20px;box-shadow:0 8px 40px rgba(44,36,20,.12)">'
+      : '';
+    document.getElementById('summaryGrid').innerHTML = previewImgHtml + `
+      <div class="summary-item"><div class="s-label">风格趋势</div><div class="s-value">${trendName}</div></div>
+      <div class="summary-item"><div class="s-label">空间类型</div><div class="s-value">${roomName}</div></div>
+      <div class="summary-item"><div class="s-label">面料风格</div><div class="s-value">${texName}</div></div>
+      <div class="summary-item"><div class="s-label">搭配评分</div><div class="s-value">${score}分 — 演示模式</div></div>
+    `;
+    document.getElementById('btn3').disabled = false;
+    goStep(4);
+    return;
+  }
+
   try {
-    // 第一步：AI生成房间
     showLoading('AI正在生成房间空间...');
     var roomResp = await fetch('/spatial/api/generate-room', {
       method: 'POST',
@@ -472,7 +541,6 @@ async function generatePreview() {
     var roomData = await roomResp.json();
     if(roomData.error) throw new Error(roomData.error);
 
-    // 第二步：将窗帘花型合成到房间中
     showLoading('AI正在合成窗帘搭配效果...');
     var previewResp = await fetch('/spatial/api/preview-textile', {
       method: 'POST',
@@ -482,7 +550,6 @@ async function generatePreview() {
     var previewData = await previewResp.json();
     if(previewData.error) throw new Error(previewData.error);
 
-    // 第三步：评估搭配效果
     var evalResp = await fetch('/spatial/api/evaluate', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -492,34 +559,65 @@ async function generatePreview() {
 
     hideLoading();
     var elapsed = ((Date.now() - previewStart) / 1000).toFixed(1);
-
-    // 生成结果
     var score = evalData.score || 85;
     document.getElementById('resultScore').textContent = score + '分';
     document.getElementById('resultTime').textContent = elapsed + 's';
-
     var trendName = selectedTrend ? selectedTrend.name : '自定义';
     var roomName = {modern:'现代客厅',bedroom:'温馨卧室',chinese:'中式雅居',nordic:'北欧风格'}[selectedRoom];
     var texName = {chinese_ink:'水墨江南',nordic_minimal:'北欧极简',japanese_wabi:'侘寂之美',french_roma:'法式浪漫',modern_abstract:'现代艺术',luxury_velvet:'奢华丝绒'}[selectedTextile];
-
-    // 显示预览图
     var previewImgHtml = previewData.filename
       ? '<img src="/spatial/outputs/' + previewData.filename + '" style="max-width:100%;border-radius:12px;margin-bottom:20px;box-shadow:0 8px 40px rgba(44,36,20,.12)">'
       : '';
-
     document.getElementById('summaryGrid').innerHTML = previewImgHtml + `
       <div class="summary-item"><div class="s-label">风格趋势</div><div class="s-value">${trendName}</div></div>
       <div class="summary-item"><div class="s-label">空间类型</div><div class="s-value">${roomName}</div></div>
       <div class="summary-item"><div class="s-label">面料风格</div><div class="s-value">${texName}</div></div>
       <div class="summary-item"><div class="s-label">搭配评分</div><div class="s-value">${score}分${evalData.level==='excellent'?' — 高度协调':evalData.level==='good'?' — 协调良好':' — 建议调整'}</div></div>
     `;
-
     document.getElementById('btn3').disabled = false;
     goStep(4);
   } catch(e) {
     hideLoading();
     alert('生成失败: ' + e.message + '\n\n此功能需要后端AI服务支持，请在本地环境启动织觉引擎后使用。');
   }
+}
+
+// C2M Canvas合成（演示模式）
+function c2mCanvasComposite(roomSrc, textileSrc) {
+    return new Promise((resolve, reject) => {
+        const roomImg = new Image();
+        roomImg.crossOrigin = 'anonymous';
+        roomImg.onload = () => {
+            const textileImg = new Image();
+            textileImg.crossOrigin = 'anonymous';
+            textileImg.onload = () => {
+                const c = document.createElement('canvas');
+                const w = roomImg.naturalWidth, h = roomImg.naturalHeight;
+                c.width = w; c.height = h;
+                const ctx = c.getContext('2d');
+                ctx.drawImage(roomImg, 0, 0, w, h);
+                ctx.save();
+                ctx.globalAlpha = 0.6;
+                const tx = w*0.55, ty = h*0.12, tw = w*0.38, th = h*0.72;
+                ctx.beginPath();
+                ctx.moveTo(tx, ty);
+                ctx.lineTo(tx+tw, ty+th*0.05);
+                ctx.lineTo(tx+tw*0.95, ty+th);
+                ctx.lineTo(tx+tw*0.05, ty+th*0.95);
+                ctx.closePath();
+                ctx.clip();
+                const pattern = ctx.createPattern(textileImg, 'repeat');
+                ctx.fillStyle = pattern;
+                ctx.fillRect(tx, ty, tw, th);
+                ctx.restore();
+                resolve(c.toDataURL('image/png'));
+            };
+            textileImg.onerror = reject;
+            textileImg.src = textileSrc;
+        };
+        roomImg.onerror = reject;
+        roomImg.src = roomSrc;
+    });
 }
 
 function showLoading(text) {
